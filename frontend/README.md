@@ -1,4 +1,17 @@
-# React + TypeScript + Vite
+# Frontend
+
+React, Vite, and TypeScript frontend for Better Map.
+
+## Quality Commands
+
+```bash
+npm run lint
+npm run typecheck
+npm run test:coverage
+npm run build
+```
+
+## Vite Template Notes
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

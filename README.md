@@ -22,7 +22,48 @@ This project follows the **Speckit Constitution**, prioritizing:
 - **Automated Quality Assurance**
 
 ## Getting Started
-*(Information on installation and running the project will be added here)*
+
+Start the backend from the repository root:
+
+```bash
+./scripts/start-backend.sh
+```
+
+Start the frontend and Cloudflare tunnel/proxy from the repository root:
+
+```bash
+./scripts/start-frontend.sh
+```
+
+The frontend script requires `cloudflared`. If `cloudflared` is missing, authentication fails, the tunnel fails to start, or no tunnel URL can be discovered, the script stops the frontend process and prints an actionable error.
+
+## Quality Gates
+
+Backend:
+
+```bash
+cd backend
+uv run ruff check .
+uv run mypy src tests
+uv run pytest --cov=src --cov-fail-under=100
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run typecheck
+npm run test:coverage
+npm run build
+```
+
+Script checks:
+
+```bash
+cd backend
+uv run pytest ../tests/scripts --cov=../tests/scripts --cov-fail-under=100
+```
 
 ## Roadmap
 - [ ] Core interactive map implementation
