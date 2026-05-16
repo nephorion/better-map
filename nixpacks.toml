@@ -5,12 +5,12 @@ nixPkgs = ["python311", "curl"]
 cmds = [
   "curl -fsSL https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.gz | tar -xz && mv node-v22.12.0-linux-x64 .node",
   "curl -LsSf https://astral.sh/uv/install.sh | sh && cd backend && ~/.local/bin/uv sync --frozen",
-  "cd frontend && ../.node/bin/npm ci"
+  "cd frontend && PATH=../.node/bin:$PATH ../.node/bin/npm ci"
 ]
 
 [phases.build]
 cmds = [
-  "cd frontend && ../.node/bin/npm run build"
+  "cd frontend && PATH=../.node/bin:$PATH ../.node/bin/npm run build"
 ]
 
 [start]

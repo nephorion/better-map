@@ -17,8 +17,8 @@ def test_nixpacks_uses_railway_supported_setup_packages() -> None:
     assert "python -m pip" not in config["phases"]["install"]["cmds"][1]
     assert "https://astral.sh/uv/install.sh" in config["phases"]["install"]["cmds"][1]
     assert "~/.local/bin/uv sync --frozen" in config["phases"]["install"]["cmds"][1]
-    assert "../.node/bin/npm ci" in config["phases"]["install"]["cmds"][2]
-    assert "../.node/bin/npm run build" in config["phases"]["build"]["cmds"][0]
+    assert "PATH=../.node/bin:$PATH ../.node/bin/npm ci" in config["phases"]["install"]["cmds"][2]
+    assert "PATH=../.node/bin:$PATH ../.node/bin/npm run build" in config["phases"]["build"]["cmds"][0]
 
 
 def test_railway_start_command_uses_dynamic_port() -> None:
