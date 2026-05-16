@@ -1,13 +1,18 @@
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_nixpacks_uses_railway_supported_node_package() -> None:
-    config = (ROOT / "nixpacks.toml").read_text()
+    config = tomllib.loads((ROOT / "nixpacks.toml").read_text())
 
-    assert "nodejs_20" in config
-    assert "nodejs_22" not in config
+    assert config["phases"]["setup"]["nixPkgs"] == [
+        "python311",
+        "uv",
+        "nodejs_20",
+        "npm-10_x",
+    ]
 
 
 def test_railway_start_command_uses_dynamic_port() -> None:
