@@ -12,7 +12,6 @@ def test_nixpacks_uses_railway_supported_node_package() -> None:
         "python311",
         "uv",
         "nodejs_20",
-        "npm-10_x",
     ]
 
 
