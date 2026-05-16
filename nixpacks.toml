@@ -1,15 +1,16 @@
 [phases.setup]
-nixPkgs = ["python311", "nodejs_20", "curl"]
+nixPkgs = ["python311", "curl"]
 
 [phases.install]
 cmds = [
+  "curl -fsSL https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.gz | tar -xz && mv node-v22.12.0-linux-x64 .node",
   "curl -LsSf https://astral.sh/uv/install.sh | sh && cd backend && ~/.local/bin/uv sync --frozen",
-  "cd frontend && npm ci"
+  "cd frontend && ../.node/bin/npm ci"
 ]
 
 [phases.build]
 cmds = [
-  "cd frontend && npm run build"
+  "cd frontend && ../.node/bin/npm run build"
 ]
 
 [start]
