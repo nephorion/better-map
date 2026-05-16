@@ -10,9 +10,10 @@ def test_nixpacks_uses_railway_supported_node_package() -> None:
 
     assert config["phases"]["setup"]["nixPkgs"] == [
         "python311",
-        "uv",
         "nodejs_20",
     ]
+    assert "python -m pip install uv" in config["phases"]["install"]["cmds"][0]
+    assert "python -m uv sync --frozen" in config["phases"]["install"]["cmds"][0]
 
 
 def test_railway_start_command_uses_dynamic_port() -> None:
@@ -20,4 +21,5 @@ def test_railway_start_command_uses_dynamic_port() -> None:
     start_command = config["deploy"]["startCommand"]
 
     assert "${PORT:-8112}" in start_command
+    assert ".venv/bin/uvicorn" in start_command
     assert "better_map.api.app:app" in start_command

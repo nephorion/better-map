@@ -1,9 +1,9 @@
 [phases.setup]
-nixPkgs = ["python311", "uv", "nodejs_20"]
+nixPkgs = ["python311", "nodejs_20"]
 
 [phases.install]
 cmds = [
-  "cd backend && uv sync --frozen",
+  "python -m pip install uv && cd backend && python -m uv sync --frozen",
   "cd frontend && npm ci"
 ]
 
@@ -13,4 +13,4 @@ cmds = [
 ]
 
 [start]
-cmd = "cd backend && PYTHONPATH=src uv run uvicorn better_map.api.app:app --host 0.0.0.0 --port ${PORT:-8112}"
+cmd = "cd backend && PYTHONPATH=src .venv/bin/uvicorn better_map.api.app:app --host 0.0.0.0 --port ${PORT:-8112}"
