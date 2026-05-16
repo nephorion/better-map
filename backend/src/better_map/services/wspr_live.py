@@ -60,7 +60,11 @@ class WsprLiveProvider:
             logger.warning("WSPR provider invalid data for callsign=%s", query.callsign)
             raise WsprProviderInvalidData("WSPR provider returned invalid data.") from exc
 
-        activities = self._to_activities(rows, query.callsign)
+        try:
+            activities = self._to_activities(rows, query.callsign)
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.warning("WSPR provider invalid row data for callsign=%s", query.callsign)
+            raise WsprProviderInvalidData("WSPR provider returned invalid data.") from exc
         deduped = self._dedupe(activities)
         truncated = len(deduped) > query.limit
         selected = deduped[: query.limit]

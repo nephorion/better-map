@@ -177,6 +177,30 @@ async def test_fetch_activity_maps_invalid_data(monkeypatch: MonkeyPatch) -> Non
 
 
 @pytest.mark.asyncio
+async def test_fetch_activity_maps_bad_row_values_to_invalid_data(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    bad = row("1")
+    bad["time"] = "not-a-date"
+    patch_client(monkeypatch, FakeResponse(200, {"data": [bad]}))
+
+    with pytest.raises(WsprProviderInvalidData):
+        await WsprLiveProvider().fetch_activity(CallsignQuery.parse("VK2DJJ"))
+
+
+@pytest.mark.asyncio
+async def test_fetch_activity_maps_missing_required_row_fields_to_invalid_data(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    bad = row("1")
+    del bad["time"]
+    patch_client(monkeypatch, FakeResponse(200, {"data": [bad]}))
+
+    with pytest.raises(WsprProviderInvalidData):
+        await WsprLiveProvider().fetch_activity(CallsignQuery.parse("VK2DJJ"))
+
+
+@pytest.mark.asyncio
 async def test_fetch_activity_maps_invalid_json(monkeypatch: MonkeyPatch) -> None:
     patch_client(monkeypatch, FakeResponse(200, ValueError("bad json")))
 

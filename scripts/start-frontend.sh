@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FRONTEND_PORT="${FRONTEND_PORT:-5212}"
 FRONTEND_URL="http://127.0.0.1:${FRONTEND_PORT}"
+FRONTEND_PID=""
+CLOUDFLARED_PID=""
+TMP_LOG=""
 
 if ! command -v cloudflared >/dev/null 2>&1; then
   printf 'Cloudflare tunnel failed: cloudflared is not installed. Install cloudflared and try again.\n' >&2
@@ -15,8 +18,14 @@ npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT" &
 FRONTEND_PID=$!
 
 cleanup() {
-  if kill -0 "$FRONTEND_PID" >/dev/null 2>&1; then
+  if [[ -n "$FRONTEND_PID" ]] && kill -0 "$FRONTEND_PID" >/dev/null 2>&1; then
     kill "$FRONTEND_PID" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "$CLOUDFLARED_PID" ]] && kill -0 "$CLOUDFLARED_PID" >/dev/null 2>&1; then
+    kill "$CLOUDFLARED_PID" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "$TMP_LOG" ]]; then
+    rm -f "$TMP_LOG"
   fi
 }
 trap cleanup EXIT

@@ -22,6 +22,8 @@ def test_frontend_script_requires_cloudflared_and_stops_frontend_on_failure() ->
     assert "command -v cloudflared" in script
     assert "5212" in script
     assert "kill \"$FRONTEND_PID\"" in script
+    assert "kill \"$CLOUDFLARED_PID\"" in script
+    assert "rm -f \"$TMP_LOG\"" in script
     assert "authentication is required or invalid" in script
     assert "tunnel startup failed" in script
     assert "no tunnel URL was discovered" in script
