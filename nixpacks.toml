@@ -1,16 +1,17 @@
 [phases.setup]
-nixPkgs = ["python311", "uv", "nodejs_22", "npm-10_x"]
+nixPkgs = ["python311", "curl"]
 
 [phases.install]
 cmds = [
-  "cd backend && uv sync --frozen",
-  "cd frontend && npm ci"
+  "curl -fsSL https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.gz | tar -xz && mv node-v22.12.0-linux-x64 .node",
+  "curl -LsSf https://astral.sh/uv/install.sh | sh && cd backend && ~/.local/bin/uv sync --frozen",
+  "cd frontend && PATH=../.node/bin:$PATH ../.node/bin/npm ci"
 ]
 
 [phases.build]
 cmds = [
-  "cd frontend && npm run build"
+  "cd frontend && PATH=../.node/bin:$PATH ../.node/bin/npm run build"
 ]
 
 [start]
-cmd = "cd backend && PYTHONPATH=src uv run uvicorn better_map.api.app:app --host 0.0.0.0 --port ${PORT:-8112}"
+cmd = "cd backend && PYTHONPATH=src .venv/bin/uvicorn better_map.api.app:app --host 0.0.0.0 --port ${PORT:-8112}"

@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "cd backend && PYTHONPATH=src uv run uvicorn better_map.api.app:app --host 0.0.0.0 --port ${PORT:-8112}",
+    "startCommand": "cd backend && PYTHONPATH=src .venv/bin/uvicorn better_map.api.app:app --host 0.0.0.0 --port ${PORT:-8112}",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
