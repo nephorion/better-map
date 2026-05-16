@@ -1,3 +1,4 @@
+import json
 import tomllib
 from pathlib import Path
 
@@ -16,7 +17,8 @@ def test_nixpacks_uses_railway_supported_node_package() -> None:
 
 
 def test_railway_start_command_uses_dynamic_port() -> None:
-    config = (ROOT / "railway.json").read_text()
+    config = json.loads((ROOT / "railway.json").read_text())
+    start_command = config["deploy"]["startCommand"]
 
-    assert "${PORT:-8112}" in config
-    assert "better_map.api.app:app" in config
+    assert "${PORT:-8112}" in start_command
+    assert "better_map.api.app:app" in start_command
