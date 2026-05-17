@@ -19,10 +19,10 @@ const feature: ActivityFeature = {
   },
 }
 
-test('shows fallback text when no activity is selected', () => {
-  render(<ActivityDetails feature={null} />)
+test('does not render a panel when no activity is selected', () => {
+  const { container } = render(<ActivityDetails feature={null} />)
 
-  expect(screen.getByText(/select a path/i)).toBeInTheDocument()
+  expect(container).toBeEmptyDOMElement()
 })
 
 test('shows selected activity details in a keyboard reachable region', () => {
