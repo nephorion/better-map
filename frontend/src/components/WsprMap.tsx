@@ -34,6 +34,12 @@ function worldStyle(layer: BaseMapLayer): StyleSpecification {
   }
 }
 
+function collapseAttribution(map: MapLibreMap) {
+  const attribution = map.getContainer().querySelector('.maplibregl-ctrl-attrib')
+  attribution?.removeAttribute('open')
+  attribution?.classList.remove('maplibregl-compact-show')
+}
+
 export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign = null }: WsprMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
@@ -52,12 +58,17 @@ export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign
       style: worldStyle(defaultBaseMapLayer()),
       center: storedView.center,
       zoom: storedView.zoom,
+      attributionControl: false,
     })
     const deckOverlay = new MapboxOverlay({ interleaved: false, layers: [] })
     mapRef.current = map
     deckOverlayRef.current = deckOverlay
     map.addControl(deckOverlay)
+    map.addControl(new maplibregl.AttributionControl({ compact: true }))
+    collapseAttribution(map)
     map.on('load', () => setMapReady(true))
+    map.on('styledata', () => collapseAttribution(map))
+    map.on('sourcedata', () => collapseAttribution(map))
     map.on('moveend', () => {
       const center = map.getCenter()
       saveMapView({ center: [center.lng, center.lat], zoom: map.getZoom() })

@@ -6,6 +6,8 @@ import { WsprMap } from './components/WsprMap'
 import { CallsignPrompt } from './components/CallsignPrompt'
 import { CallsignOverlay } from './components/CallsignOverlay'
 import { BaseMapSelector } from './components/BaseMapSelector'
+import { DonationPane } from './components/DonationPane'
+import { NephorionLink } from './components/NephorionLink'
 import { RefreshCountdown } from './components/RefreshCountdown'
 import { readStoredCallsign, saveCallsign } from './services/callsign'
 import { nextRefreshAt, remainingRefreshSeconds } from './services/refreshState'
@@ -26,6 +28,8 @@ function App() {
   const [baseLayerId, setBaseLayerId] = useState<BaseMapLayer['id']>(readStoredBaseMapLayer)
   const [baseMapOpen, setBaseMapOpen] = useState(false)
   const [version, setVersion] = useState<VersionMetadata | null>(null)
+  const [donationOpen, setDonationOpen] = useState(false)
+  const [donationFailed, setDonationFailed] = useState(false)
   const activeRequest = useRef<string | null>(null)
 
   async function loadActivity(activeCallsign: string) {
@@ -71,6 +75,16 @@ function App() {
     saveBaseMapLayer(id)
   }
 
+  function toggleBaseMap() {
+    setDonationOpen(false)
+    setBaseMapOpen((open) => !open)
+  }
+
+  function openDonation() {
+    setBaseMapOpen(false)
+    setDonationOpen(true)
+  }
+
   useEffect(() => {
     const startupCallsign = initialStorage.callsign
     if (startupCallsign) window.setTimeout(() => void loadActivity(startupCallsign), 0)
@@ -109,8 +123,19 @@ function App() {
         activeLayerId={baseLayerId}
         open={baseMapOpen}
         onChange={changeBaseMap}
-        onToggle={() => setBaseMapOpen((open) => !open)}
+        onToggle={toggleBaseMap}
       />
+      <div className="donation-controls" aria-label="Project donation link">
+        <DonationPane
+          open={donationOpen}
+          failed={donationFailed}
+          onOpen={openDonation}
+          onDismiss={() => setDonationOpen(false)}
+          /* v8 ignore next -- iframe error events are not reliable in jsdom. */
+          onLoadError={() => setDonationFailed(true)}
+        />
+      </div>
+      <NephorionLink />
       {promptOpen ? (
         <CallsignPrompt initialValue={callsign ?? ''} onConfirm={confirmCallsign} onDismiss={() => setPromptOpen(false)} />
       ) : null}
@@ -120,7 +145,7 @@ function App() {
         </button>
       ) : null}
       {status || version?.error ? (
-        <p className="status-message overlay-panel" role="status" aria-live="polite">
+        <p className="status-message overlay-panel" role="status" aria-live="polite" key={[status, version?.error].filter(Boolean).join(' ')}>
           {[status, version?.error].filter(Boolean).join(' ')}
         </p>
       ) : null}

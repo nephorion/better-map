@@ -1,16 +1,27 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { RefreshCountdown } from './RefreshCountdown'
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 test('shows subtle progress bar and triggers manual refresh', async () => {
-  const user = userEvent.setup()
+  vi.useFakeTimers()
   const onRefresh = vi.fn()
   render(<RefreshCountdown remainingSeconds={125} refreshing={false} onRefresh={onRefresh} />)
 
   expect(screen.getByRole('tooltip')).toHaveTextContent('Refresh in 2:05')
   expect(screen.getByRole('button', { name: /refresh wspr activity/i })).not.toHaveAttribute('title')
-  await user.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
+  fireEvent.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
+  expect(screen.getByRole('button', { name: /refresh wspr activity/i })).toHaveClass('near-refresh')
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Refreshing in 3 seconds')
+  expect(onRefresh).not.toHaveBeenCalled()
+
+  await vi.advanceTimersByTimeAsync(3000)
+
   expect(onRefresh).toHaveBeenCalled()
+  vi.useRealTimers()
 })
 
 test('drains the countdown bar as refresh approaches', () => {
@@ -40,5 +51,5 @@ test('shows refreshing state while remaining clickable', async () => {
   expect(screen.getByRole('tooltip')).toHaveTextContent('Refreshing WSPR activity')
   rerender(<RefreshCountdown remainingSeconds={0} refreshing onRefresh={onRefresh} />)
   await user.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
-  expect(onRefresh).toHaveBeenCalled()
+  expect(onRefresh).not.toHaveBeenCalled()
 })

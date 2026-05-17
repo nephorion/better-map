@@ -6,14 +6,18 @@ import type { ActivityFeature } from '../services/wsprActivity'
 
 type MapLibreMocks = {
   addLayer: ReturnType<typeof vi.fn>
+  addControl: ReturnType<typeof vi.fn>
   addSource: ReturnType<typeof vi.fn>
   extend: ReturnType<typeof vi.fn>
   fitBounds: ReturnType<typeof vi.fn>
   getCenter: ReturnType<typeof vi.fn>
+  getContainer: ReturnType<typeof vi.fn>
   getSource: ReturnType<typeof vi.fn>
   getZoom: ReturnType<typeof vi.fn>
   loadHandler?: () => void
   moveEndHandler?: () => void
+  sourceDataHandler?: () => void
+  styleDataHandler?: () => void
   remove: ReturnType<typeof vi.fn>
   setData: ReturnType<typeof vi.fn>
   setStyle: ReturnType<typeof vi.fn>
@@ -44,6 +48,9 @@ beforeEach(() => {
   mocks.getSource.mockReturnValue(undefined)
   mocks.loadHandler = undefined
   mocks.moveEndHandler = undefined
+  mocks.sourceDataHandler = undefined
+  mocks.styleDataHandler = undefined
+  mocks.getContainer.mockReturnValue(document.createElement('div'))
   window.localStorage.clear()
 })
 
@@ -55,6 +62,38 @@ test('shows an empty map state on a real world map container', () => {
   expect(screen.queryByLabelText(/keyboard selectable wspr paths/i)).not.toBeInTheDocument()
   unmount()
   expect(mocks.remove).toHaveBeenCalled()
+})
+
+test('keeps map attribution collapsed by default', () => {
+  const container = document.createElement('div')
+  const attribution = document.createElement('details')
+  attribution.className = 'maplibregl-ctrl-attrib maplibregl-compact maplibregl-compact-show'
+  attribution.setAttribute('open', '')
+  container.append(attribution)
+  mocks.getContainer.mockReturnValue(container)
+
+  render(<WsprMap features={[]} />)
+
+  expect(mocks.addControl).toHaveBeenCalledWith(expect.objectContaining({ options: { compact: true } }))
+  expect(attribution).not.toHaveAttribute('open')
+  expect(attribution).not.toHaveClass('maplibregl-compact-show')
+})
+
+test('keeps map attribution collapsed after attribution data updates', () => {
+  const container = document.createElement('div')
+  const attribution = document.createElement('details')
+  attribution.className = 'maplibregl-ctrl-attrib maplibregl-compact maplibregl-compact-show'
+  attribution.setAttribute('open', '')
+  container.append(attribution)
+  mocks.getContainer.mockReturnValue(container)
+
+  render(<WsprMap features={[]} />)
+  attribution.classList.add('maplibregl-compact-show')
+  attribution.setAttribute('open', '')
+  mocks.styleDataHandler?.()
+
+  expect(attribution).not.toHaveAttribute('open')
+  expect(attribution).not.toHaveClass('maplibregl-compact-show')
 })
 
 test('loads an empty deck.gl collection without fitting bounds', async () => {

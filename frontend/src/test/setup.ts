@@ -6,6 +6,7 @@ const maplibreMocks = {
   addSource: vi.fn(),
   extend: vi.fn(),
   fitBounds: vi.fn(),
+  getContainer: vi.fn(() => document.createElement('div')),
   getSource: vi.fn(),
   getCenter: vi.fn(() => ({ lng: 151, lat: -34 })),
   getZoom: vi.fn(() => 4),
@@ -14,6 +15,8 @@ const maplibreMocks = {
   setStyle: vi.fn(),
   loadHandler: undefined as (() => void) | undefined,
   moveEndHandler: undefined as (() => void) | undefined,
+  sourceDataHandler: undefined as (() => void) | undefined,
+  styleDataHandler: undefined as (() => void) | undefined,
 }
 
 const deckMocks = {
@@ -28,6 +31,7 @@ vi.mock('maplibre-gl', () => {
     addSource = maplibreMocks.addSource
     fitBounds = maplibreMocks.fitBounds
     getCenter = maplibreMocks.getCenter
+    getContainer = maplibreMocks.getContainer
     getSource = maplibreMocks.getSource
     getZoom = maplibreMocks.getZoom
     remove = maplibreMocks.remove
@@ -36,6 +40,8 @@ vi.mock('maplibre-gl', () => {
     on(event: string, handler: () => void) {
       if (event === 'load') maplibreMocks.loadHandler = handler
       if (event === 'moveend') maplibreMocks.moveEndHandler = handler
+      if (event === 'sourcedata') maplibreMocks.sourceDataHandler = handler
+      if (event === 'styledata') maplibreMocks.styleDataHandler = handler
     }
   }
 
@@ -50,9 +56,18 @@ vi.mock('maplibre-gl', () => {
     }
   }
 
+  class AttributionControlMock {
+    options: unknown
+
+    constructor(options: unknown) {
+      this.options = options
+    }
+  }
+
   return {
       default: {
         Map: MapMock,
+      AttributionControl: AttributionControlMock,
       LngLatBounds: LngLatBoundsMock,
       __mocks: maplibreMocks,
     },

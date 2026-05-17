@@ -9,9 +9,10 @@ from better_map.api.wspr import router as wspr_router
 
 
 def short_version_hash() -> str:
-    env_hash = os.getenv("BETTER_MAP_VERSION")
-    if env_hash:
-        return env_hash[:12]
+    for env_key in ("BETTER_MAP_VERSION", "RAILWAY_GIT_COMMIT_SHA", "RAILWAY_GIT_COMMIT"):
+        env_hash = os.getenv(env_key)
+        if env_hash:
+            return env_hash.strip()[:12]
     try:
         return subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"], text=True, stderr=subprocess.DEVNULL

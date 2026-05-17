@@ -1,20 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { execSync } from 'node:child_process'
-
-function shortGitHash() {
-  try {
-    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
-  } catch {
-    return 'dev'
-  }
-}
+import { resolveAppVersion } from './version'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(shortGitHash()),
+    __APP_VERSION__: JSON.stringify(resolveAppVersion()),
   },
   server: {
     host: '127.0.0.1',

@@ -160,6 +160,7 @@ button.overlay-panel,
 }
 
 .base-map-toggle {
+  position: relative;
   display: grid;
   place-items: center;
   width: 34px;
@@ -173,12 +174,39 @@ button.overlay-panel,
   cursor: pointer;
 }
 
-.base-map-menu {
+.control-tooltip {
   position: absolute;
-  left: 0;
-  bottom: 44px;
+  left: 44px;
+  top: 50%;
+  width: max-content;
+  transform: translateY(-50%);
+  border-radius: 8px;
+  padding: 4px 7px;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(3, 17, 31, 0.78);
+  font-family: var(--mono, ui-monospace, Consolas, monospace);
+  font-size: 0.68rem;
+  font-weight: 400;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.base-map-toggle:hover .control-tooltip,
+.base-map-toggle:focus-visible .control-tooltip,
+.donation-button:hover .control-tooltip,
+.donation-button:focus-visible .control-tooltip {
+  opacity: 1;
+}
+
+.base-map-menu {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: min(360px, calc(100vw - 24px));
-  max-height: min(520px, calc(100vh - 96px));
+  max-height: min(520px, calc(100vh - 48px));
   overflow: auto;
 }
 
@@ -299,11 +327,127 @@ button.overlay-panel,
 
 .status-message {
   position: absolute;
-  z-index: 5;
+  z-index: 8;
   right: 16px;
-  bottom: 16px;
+  top: 16px;
   max-width: min(460px, calc(100vw - 32px));
   color: #d8efff;
+  animation: status-toast-fade 2s ease forwards;
+}
+
+@keyframes status-toast-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  12%,
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.donation-controls {
+  position: absolute;
+  z-index: 6;
+  left: 12px;
+  bottom: 76px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.support-link {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(104, 211, 255, 0.28);
+  border-radius: 10px;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(3, 17, 31, 0.78);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  backdrop-filter: blur(10px);
+}
+
+.support-link:hover,
+.support-link:focus-visible {
+  color: #f7fbff;
+  border-color: rgba(104, 211, 255, 0.5);
+  outline: none;
+}
+
+.donation-control {
+  position: relative;
+}
+
+.donation-button {
+  cursor: pointer;
+}
+
+.donation-pane {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 10px;
+  width: min(380px, calc(100vw - 32px));
+  padding: 12px;
+}
+
+.support-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.support-panel-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.support-panel-header button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #03111f;
+  background: #68d3ff;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.donation-pane iframe {
+  width: 100%;
+  height: min(520px, calc(100vh - 180px));
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.donation-pane p {
+  margin: 0;
+  color: #d8efff;
+  font-size: 0.88rem;
+}
+
+.donation-pane a {
+  color: #ffde7a;
 }
 
 .version-hash {
@@ -315,6 +459,29 @@ button.overlay-panel,
   font-family: var(--mono, ui-monospace, Consolas, monospace);
   font-size: 0.72rem;
   pointer-events: none;
+}
+
+.nephorion-credit {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-family: var(--mono, ui-monospace, Consolas, monospace);
+  font-size: 0.72rem;
+}
+
+.nephorion-credit a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nephorion-credit a:hover,
+.nephorion-credit a:focus-visible {
+  color: rgba(255, 255, 255, 0.82);
+  outline: none;
 }
 
 .activity-details {
@@ -380,7 +547,20 @@ button.overlay-panel,
   }
 
   .status-message {
-    bottom: 10px;
+    top: 10px;
+  }
+
+  .donation-controls {
+    left: 10px;
+    bottom: 82px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    max-width: calc(100vw - 96px);
+  }
+
+  .donation-pane {
+    left: 50%;
+    width: min(340px, calc(100vw - 32px));
   }
 
   .activity-details {
