@@ -18,9 +18,26 @@ def test_version_endpoint_returns_short_hash(monkeypatch) -> None:  # type: igno
 
 def test_short_version_hash_uses_git_when_env_missing(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.delenv("BETTER_MAP_VERSION", raising=False)
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT_SHA", raising=False)
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT", raising=False)
     monkeypatch.setattr(app_module.subprocess, "check_output", lambda *args, **kwargs: "def5678\n")
 
     assert short_version_hash() == "def5678"
+
+
+def test_short_version_hash_uses_railway_metadata(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.delenv("BETTER_MAP_VERSION", raising=False)
+    monkeypatch.setenv("RAILWAY_GIT_COMMIT_SHA", "railwayabcdef123")
+
+    assert short_version_hash() == "railwayabcde"
+
+
+def test_short_version_hash_uses_legacy_railway_metadata(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.delenv("BETTER_MAP_VERSION", raising=False)
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT_SHA", raising=False)
+    monkeypatch.setenv("RAILWAY_GIT_COMMIT", "legacyrailway123")
+
+    assert short_version_hash() == "legacyrailwa"
 
 
 def test_short_version_hash_falls_back_to_dev(monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -28,6 +45,8 @@ def test_short_version_hash_falls_back_to_dev(monkeypatch) -> None:  # type: ign
         raise OSError
 
     monkeypatch.delenv("BETTER_MAP_VERSION", raising=False)
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT_SHA", raising=False)
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT", raising=False)
     monkeypatch.setattr(app_module.subprocess, "check_output", raise_os_error)
 
     assert short_version_hash() == "dev"

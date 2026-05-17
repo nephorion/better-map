@@ -1,5 +1,13 @@
 import { frontendVersion, loadVersionMetadata } from './versionMetadata'
 
+test('reads configured frontend version and falls back to dev', () => {
+  vi.stubGlobal('__APP_VERSION__', 'frontabc123')
+  expect(frontendVersion()).toBe('frontabc123')
+
+  vi.stubGlobal('__APP_VERSION__', '')
+  expect(frontendVersion()).toBe('dev')
+})
+
 test('returns frontend version metadata and matching backend hash', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ short_hash: frontendVersion() })))
 

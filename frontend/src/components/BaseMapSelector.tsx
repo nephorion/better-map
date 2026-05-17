@@ -32,6 +32,7 @@ export function BaseMapSelector({ activeLayerId, onChange, open, onToggle }: Bas
         onClick={onToggle}
       >
         ◫
+        <span className="control-tooltip" role="tooltip">Base map</span>
       </button>
       {open ? (
         <div className="overlay-panel base-map-menu" role="dialog" aria-label="Base map choices">

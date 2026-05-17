@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { REFRESH_INTERVAL_SECONDS, formatRemainingTime } from '../services/refreshState'
 
 type RefreshCountdownProps = {
@@ -8,14 +8,43 @@ type RefreshCountdownProps = {
 }
 
 export function RefreshCountdown({ remainingSeconds, refreshing, onRefresh }: RefreshCountdownProps) {
-  const progress = refreshing ? 1 : Math.min(remainingSeconds, REFRESH_INTERVAL_SECONDS) / REFRESH_INTERVAL_SECONDS
-  const tooltip = refreshing ? 'Refreshing WSPR activity' : `Refresh in ${formatRemainingTime(remainingSeconds)}`
+  const [pendingManualRefresh, setPendingManualRefresh] = useState(false)
+  const onRefreshRef = useRef(onRefresh)
+  const progress = refreshing || pendingManualRefresh ? 1 : Math.min(remainingSeconds, REFRESH_INTERVAL_SECONDS) / REFRESH_INTERVAL_SECONDS
+  const tooltip = refreshing
+    ? 'Refreshing WSPR activity'
+    : pendingManualRefresh
+      ? 'Refreshing in 3 seconds'
+      : `Refresh in ${formatRemainingTime(remainingSeconds)}`
+
+  useEffect(() => {
+    onRefreshRef.current = onRefresh
+  }, [onRefresh])
+
+  useEffect(() => {
+    if (!pendingManualRefresh) return
+    const timer = window.setTimeout(() => {
+      setPendingManualRefresh(false)
+      onRefreshRef.current()
+    }, 3000)
+
+    return () => window.clearTimeout(timer)
+  }, [pendingManualRefresh])
+
+  useEffect(() => {
+    if (refreshing) setPendingManualRefresh(false)
+  }, [refreshing])
+
+  function queueManualRefresh() {
+    if (refreshing || pendingManualRefresh) return
+    setPendingManualRefresh(true)
+  }
 
   return (
     <button
       type="button"
-      className={remainingSeconds <= 30 && !refreshing ? 'refresh-countdown near-refresh' : 'refresh-countdown'}
-      onClick={onRefresh}
+      className={(remainingSeconds <= 30 && !refreshing) || pendingManualRefresh ? 'refresh-countdown near-refresh' : 'refresh-countdown'}
+      onClick={queueManualRefresh}
       aria-label="Refresh WSPR activity"
       aria-describedby="refresh-countdown-tooltip"
       data-tooltip={tooltip}

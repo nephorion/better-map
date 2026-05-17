@@ -39,6 +39,7 @@ test('keeps base map choices closed behind the icon', async () => {
 
   expect(screen.queryByRole('dialog', { name: /base map choices/i })).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/map attribution/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('tooltip', { name: /base map/i })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /choose base map/i }))
   expect(onToggle).toHaveBeenCalled()
 })

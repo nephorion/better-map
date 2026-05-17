@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { ApiClientError } from './services/apiClient'
@@ -11,6 +11,7 @@ vi.mock('./services/wsprActivity', async () => {
 })
 
 beforeEach(() => {
+  vi.useRealTimers()
   vi.clearAllMocks()
   vi.unstubAllGlobals()
   window.localStorage.clear()
@@ -165,8 +166,12 @@ test('changes base map, reopens callsign prompt, and refreshes manually', async 
   expect(window.localStorage.getItem('better-map.baseMapLayer')).toBe('osm-humanitarian')
   await user.click(screen.getByRole('button', { name: /active callsign/i }))
   expect(screen.getByRole('dialog', { name: /choose callsign/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
+  vi.useFakeTimers()
+  fireEvent.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
+  expect(fetchWsprActivity).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(3000)
   expect(fetchWsprActivity).toHaveBeenCalledTimes(2)
+  vi.useRealTimers()
 })
 
 test('starts with the saved base map layer', () => {
@@ -183,6 +188,54 @@ test('shows version mismatch status when metadata differs', async () => {
   render(<App />)
 
   expect(await screen.findByText(/versions do not match/i)).toBeInTheDocument()
+})
+
+test('opens and dismisses Ko-fi pane without changing callsign or base map state', async () => {
+  vi.mocked(fetchWsprActivity).mockResolvedValue({
+    callsign: 'VK2DJJ',
+    window_days: 10,
+    source: 'wspr.live',
+    count: 0,
+    truncated: false,
+    features: [],
+  })
+  const user = userEvent.setup()
+  render(<App />)
+
+  await setCallsign(user)
+  await user.click(screen.getByRole('button', { name: /choose base map/i }))
+  await user.click(screen.getByRole('button', { name: /carto positron/i }))
+  await user.click(screen.getByRole('button', { name: /donate/i }))
+
+  expect(screen.getByLabelText(/support better map on ko-fi/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /dismiss/i }))
+
+  expect(screen.queryByLabelText(/support better map on ko-fi/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /active callsign/i })).toHaveTextContent('VK2DJJ')
+  expect(window.localStorage.getItem('better-map.baseMapLayer')).toBe('carto-positron')
+})
+
+test('keeps only one left control popup open and closes donation on outside click', async () => {
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /donate/i }))
+  expect(screen.getByLabelText(/support better map on ko-fi/i)).toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: /choose base map/i }))
+  expect(screen.queryByLabelText(/support better map on ko-fi/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: /base map choices/i })).toBeInTheDocument()
+
+  await user.click(screen.getByLabelText(/wspr activity map/i))
+  expect(screen.queryByRole('dialog', { name: /base map choices/i })).not.toBeInTheDocument()
+})
+
+test('renders Nephorion support link with safe external navigation', () => {
+  render(<App />)
+
+  const link = screen.getByRole('link', { name: /visit nephorion main site/i })
+  expect(link).toHaveAttribute('href', 'https://nephorion.com')
+  expect(link).toHaveAttribute('target', '_blank')
 })
 
 test('warns when callsign cannot be persisted and blocks duplicate refreshes', async () => {
