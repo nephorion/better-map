@@ -1,6 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { MapboxOverlay } from '@deck.gl/mapbox'
+import { PathLayer } from '@deck.gl/layers'
 import maplibregl, {
-  type GeoJSONSource,
   type Map as MapLibreMap,
   type StyleSpecification,
 } from 'maplibre-gl'
@@ -8,120 +9,103 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ActivityFeature } from '../services/wsprActivity'
 import { toMapPaths } from '../services/mapFeatures'
 import { ActivityDetails } from './ActivityDetails'
+import { defaultBaseMapLayer, findBaseMapLayer, type BaseMapLayer } from '../services/baseMapLayers'
+import { readStoredMapView, saveMapView } from '../services/mapView'
 
 type WsprMapProps = {
   features: ActivityFeature[]
   truncated?: boolean
+  baseLayerId?: BaseMapLayer['id']
+  activeCallsign?: string | null
 }
 
-const pathSourceId = 'wspr-paths-source'
-const pathLayerId = 'wspr-paths'
-
-const worldStyle: StyleSpecification = {
-  version: 8,
-  sources: {
-    osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
-    },
-  },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-}
-
-function toFeatureCollection(features: ActivityFeature[]) {
+function worldStyle(layer: BaseMapLayer): StyleSpecification {
   return {
-    type: 'FeatureCollection' as const,
-    features,
+    version: 8,
+    sources: {
+      base: {
+        type: 'raster',
+        tiles: layer.tiles,
+        tileSize: 256,
+        attribution: layer.attribution,
+      },
+    },
+    layers: [{ id: 'base', type: 'raster', source: 'base' }],
   }
 }
 
-function boundsFor(features: ActivityFeature[]) {
-  const coordinates = features.flatMap((feature) => feature.geometry.coordinates)
-  if (coordinates.length === 0) return null
-
-  const bounds = new maplibregl.LngLatBounds(coordinates[0], coordinates[0])
-  coordinates.slice(1).forEach((coordinate) => bounds.extend(coordinate))
-  return bounds
-}
-
-export function WsprMap({ features, truncated = false }: WsprMapProps) {
+export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign = null }: WsprMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
+  const deckOverlayRef = useRef<MapboxOverlay | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const paths = useMemo(() => toMapPaths(features), [features])
-  const selected = features.find((feature) => feature.id === selectedId) ?? null
+  const paths = useMemo(() => toMapPaths(features, activeCallsign), [activeCallsign, features])
+  const activeSelectedId = features.some((feature) => feature.id === selectedId) ? selectedId : null
+  const selected = features.find((feature) => feature.id === activeSelectedId) ?? null
+  const baseLayer = findBaseMapLayer(baseLayerId)
 
   useEffect(() => {
+    const storedView = readStoredMapView()
     const map = new maplibregl.Map({
       container: containerRef.current!,
-      style: worldStyle,
-      center: [133, -27],
-      zoom: 1.8,
+      style: worldStyle(defaultBaseMapLayer()),
+      center: storedView.center,
+      zoom: storedView.zoom,
     })
+    const deckOverlay = new MapboxOverlay({ interleaved: false, layers: [] })
     mapRef.current = map
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
+    deckOverlayRef.current = deckOverlay
+    map.addControl(deckOverlay)
     map.on('load', () => setMapReady(true))
+    map.on('moveend', () => {
+      const center = map.getCenter()
+      saveMapView({ center: [center.lng, center.lat], zoom: map.getZoom() })
+    })
 
     return () => {
+      deckOverlay.finalize()
       map.remove()
       mapRef.current = null
+      deckOverlayRef.current = null
     }
   }, [])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapReady) return
+    map.setStyle(worldStyle(baseLayer))
+  }, [baseLayer, mapReady])
 
-    const collection = toFeatureCollection(features)
-    const existingSource = map.getSource(pathSourceId) as GeoJSONSource | undefined
+  useEffect(() => {
+    const map = mapRef.current
+    const deckOverlay = deckOverlayRef.current
+    if (!map || !deckOverlay || !mapReady) return
 
-    if (existingSource) {
-      existingSource.setData(collection)
-    } else {
-      map.addSource(pathSourceId, { type: 'geojson', data: collection })
-      map.addLayer({
-        id: pathLayerId,
-        type: 'line',
-        source: pathSourceId,
-        paint: {
-          'line-color': '#68d3ff',
-          'line-width': 2.5,
-          'line-opacity': 0.86,
-        },
-      })
-    }
-
-    const bounds = boundsFor(features)
-    if (bounds) {
-      map.fitBounds(bounds, { padding: 56, maxZoom: 5, duration: 500 })
-    }
-  }, [features, mapReady])
+    deckOverlay.setProps({
+      layers: [
+        new PathLayer({
+          id: 'wspr-deck-paths',
+          data: paths,
+          getPath: (path) => path.coordinates,
+          getColor: (path) => (path.id === activeSelectedId ? [255, 222, 122, 245] : [104, 211, 255, 220]),
+          getWidth: (path) => (path.id === activeSelectedId ? 5 : 3),
+          widthMinPixels: 2,
+          pickable: true,
+          autoHighlight: true,
+          onClick: (info) => {
+            if (info.object) setSelectedId(info.object.id)
+          },
+        }),
+      ],
+    })
+  }, [activeSelectedId, mapReady, paths])
 
   return (
     <div className="wspr-map" aria-label="WSPR path map">
-      {truncated ? (
-        <p className="map-notice" role="status">
-          Showing only the most recent 1,000 records.
-        </p>
-      ) : null}
       {paths.length === 0 ? <p>No map paths to display.</p> : null}
       <div ref={containerRef} className="map-canvas" role="application" aria-label="World map" />
-      <div className="path-list" aria-label="Mapped WSPR paths">
-        {paths.map((path) => (
-          <button
-            key={path.id}
-            type="button"
-            className={selectedId === path.id ? 'path-button selected' : 'path-button'}
-            onClick={() => setSelectedId(path.id)}
-          >
-            {path.label}
-          </button>
-        ))}
-      </div>
-      <ActivityDetails feature={selected} />
+      <ActivityDetails feature={selected} onClose={() => setSelectedId(null)} />
     </div>
   )
 }
