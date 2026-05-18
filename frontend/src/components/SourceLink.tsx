@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// SPDX-License-Identifier: AGPL-3.0-only
 
 import { SOURCE_REPOSITORY_URL, SUPPORT_LINK_LABELS } from '../services/supportLinks'
 

@@ -498,6 +498,11 @@ button.overlay-panel,
   outline: none;
 }
 
+.source-credit a:focus-visible {
+  outline: 1px solid rgba(104, 211, 255, 0.7);
+  outline-offset: 3px;
+}
+
 .source-credit a {
   color: rgba(255, 255, 255, 0.58);
 }
