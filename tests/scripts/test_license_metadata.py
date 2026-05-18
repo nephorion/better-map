@@ -35,12 +35,13 @@ def test_repository_license_metadata_uses_agpl_3_only() -> None:
 
 def source_files() -> list[Path]:
     roots = [
+        REPO_ROOT / ".specify",
         REPO_ROOT / "frontend",
         REPO_ROOT / "backend",
         REPO_ROOT / "tests",
         REPO_ROOT / "scripts",
     ]
-    suffixes = {".css", ".js", ".py", ".sh", ".ts", ".tsx"}
+    suffixes = {".css", ".js", ".ps1", ".py", ".sh", ".ts", ".tsx", ".yml"}
     ignored_parts = {".venv", "coverage", "dist", "node_modules"}
     return sorted(
         path

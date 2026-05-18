@@ -16,14 +16,10 @@ test('does not add duplicate scripts or custom interaction events', () => {
   initializeGoogleAnalytics()
 
   expect(document.querySelectorAll('#better-map-google-analytics')).toHaveLength(1)
-  expect(window.dataLayer).not.toEqual(
-    expect.arrayContaining([
-      expect.arrayContaining(['event']),
-      expect.arrayContaining(['callsign']),
-      expect.arrayContaining(['donation']),
-      expect.arrayContaining(['source']),
-    ]),
-  )
+  expect(window.dataLayer).not.toContainEqual(expect.arrayContaining(['event']))
+  expect(window.dataLayer).not.toContainEqual(expect.arrayContaining(['callsign']))
+  expect(window.dataLayer).not.toContainEqual(expect.arrayContaining(['donation']))
+  expect(window.dataLayer).not.toContainEqual(expect.arrayContaining(['source']))
 })
 
 test('fails closed when analytics cannot be inserted', () => {

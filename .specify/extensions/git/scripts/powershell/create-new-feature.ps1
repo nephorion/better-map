@@ -1,4 +1,5 @@
 #!/usr/bin/env pwsh
+# SPDX-License-Identifier: AGPL-3.0-only
 # Git extension: create-new-feature.ps1
 # Adapted from core scripts/powershell/create-new-feature.ps1 for extension layout.
 # Sources common.ps1 from the project's installed scripts, falling back to

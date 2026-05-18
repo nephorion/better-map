@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only
 # Git extension: create-new-feature.sh
 # Adapted from core scripts/bash/create-new-feature.sh for extension layout.
 # Sources common.sh from the project's installed scripts, falling back to
