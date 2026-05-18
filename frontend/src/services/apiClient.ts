@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 export type ApiErrorCode =
   | 'invalid_request'
   | 'provider_rate_limited'

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { GOOGLE_ANALYTICS_ID, initializeGoogleAnalytics } from './analytics'
 
 test('initializes default Google Analytics page-view configuration', () => {
@@ -20,6 +21,7 @@ test('does not add duplicate scripts or custom interaction events', () => {
       expect.arrayContaining(['event']),
       expect.arrayContaining(['callsign']),
       expect.arrayContaining(['donation']),
+      expect.arrayContaining(['source']),
     ]),
   )
 })

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 export type BaseMapLayer = {
   id: 'osm-standard' | 'opentopomap' | 'osm-humanitarian' | 'carto-positron' | 'carto-dark-matter' | 'carto-voyager'
   name: string

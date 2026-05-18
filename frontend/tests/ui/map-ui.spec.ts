@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test'
 
 const activityPayload = {
@@ -66,6 +67,7 @@ test('keeps map and controls usable on mobile-sized viewports', async ({ page })
   await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
   await expect(page.getByLabel('Frontend version hash')).not.toBeEmpty()
 })
 
@@ -99,5 +101,6 @@ test('keeps controls usable after simulated visibility return', async ({ page })
   await expect(page.getByRole('button', { name: /active callsign/i })).toHaveText(/VK2DJJ/i)
   await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
   await expect(page.getByLabel('Frontend version hash')).not.toBeEmpty()
 })

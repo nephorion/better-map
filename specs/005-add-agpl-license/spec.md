@@ -8,6 +8,16 @@
 
 **Input**: User description: " also add a license ... I want the AGPL v3 licesne"
 
+## Clarifications
+
+### Session 2026-05-18
+
+- Q: Copyright holder name for the AGPL v3 LICENSE boilerplate → A: Nephorion
+- Q: SPDX identifier for project metadata → A: AGPL-3.0-only
+- Q: AGPL §13 network-use source-offer location → A: Subtle in-app "Source" link to the GitHub repository
+- Q: Per-source-file license header style → A: Short SPDX-only header (`SPDX-License-Identifier: AGPL-3.0-only`)
+- Q: Scope of metadata surfaces that declare the license → A: LICENSE file, frontend/package.json, pyproject.toml, README badge, GitHub repo metadata
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Confirm Project License (Priority: P1)
@@ -37,6 +47,7 @@ As a person deploying or hosting the project, I want the licensing information t
 
 1. **Given** a person plans to host a modified version, **When** they review the project license, **Then** they can determine that AGPL v3 obligations apply to network-accessible use.
 2. **Given** a person distributes or offers access to a modified version, **When** they review the license information, **Then** they can find the obligation to provide corresponding source under the license terms.
+3. **Given** a user interacts with the hosted map in a browser, **When** they look at the app's overlay controls, **Then** a subtle in-app link to the corresponding source repository is visible to satisfy AGPL v3 §13.
 
 ---
 
@@ -66,19 +77,21 @@ As a map user, I want the addition of licensing information to avoid changing th
 
 ### Functional Requirements
 
-- **FR-001**: The project MUST clearly identify GNU Affero General Public License version 3 as its license.
+- **FR-001**: The project MUST clearly identify GNU Affero General Public License version 3 as its license, with copyright attributed to Nephorion.
 - **FR-002**: The project MUST include the full standard AGPL v3 license terms or a clearly accessible copy of those terms.
 - **FR-003**: Public-facing project documentation MUST make the license discoverable to users, contributors, deployers, and redistributors.
-- **FR-004**: Any project metadata that declares a license MUST use a value consistent with AGPL v3.
-- **FR-005**: The license addition MUST NOT change existing map features, data lookup behavior, support links, analytics behavior, or deployment behavior.
+- **FR-004**: Project license metadata MUST be declared as SPDX `AGPL-3.0-only` in all of the following surfaces: the `LICENSE` file at the repository root, `frontend/package.json`, `pyproject.toml`, a license badge in `README.md`, and the GitHub repository "license" metadata.
+- **FR-005**: The license addition MUST NOT change existing map features, data lookup behavior, support links, analytics behavior, or deployment behavior, except for adding the AGPL §13 source-code link described in FR-008.
+- **FR-008**: The hosted application MUST surface a subtle, persistently visible link to the corresponding source repository in the running UI to satisfy AGPL v3 §13 network-use obligations.
+- **FR-009**: Every committed source file in the project MUST begin with a short SPDX header line declaring `SPDX-License-Identifier: AGPL-3.0-only`, using the comment syntax appropriate for that file type.
 - **FR-006**: The license information MUST avoid conflicting statements about proprietary, permissive, or alternative licensing unless explicitly marked as not applicable.
 - **FR-007**: The license information MUST be suitable for people evaluating project reuse, modification, hosting, and redistribution.
 
 ### Key Entities
 
-- **Project License**: The authoritative statement that the project is licensed under GNU Affero General Public License version 3.
+- **Project License**: The authoritative statement that the project is licensed under GNU Affero General Public License version 3, with copyright held by Nephorion.
 - **License Terms**: The full legal text or accessible standard copy of AGPL v3 that defines user, contributor, host, and redistributor obligations.
-- **License Metadata**: Any structured project information that declares the selected license for tooling, package indexes, or repository viewers.
+- **License Metadata**: The set of declarations across `LICENSE`, `frontend/package.json`, `pyproject.toml`, `README.md` (badge), GitHub repository metadata, and per-file SPDX headers, that together identify the project as AGPL-3.0-only.
 
 ## Success Criteria *(mandatory)*
 
@@ -89,10 +102,11 @@ As a map user, I want the addition of licensing information to avoid changing th
 - **SC-003**: A deployer reviewing the license information can find the AGPL v3 terms relevant to hosted or network-accessible modified versions within 2 minutes.
 - **SC-004**: Existing primary map workflows remain successful in 100% of post-license acceptance checks.
 - **SC-005**: Repository license detection tools or viewers identify the project license as AGPL v3 where such detection is supported.
+- **SC-006**: A network user of the hosted app can reach the corresponding source repository from a visible in-app link in 1 click without leaving the running map view.
 
 ## Assumptions
 
-- The intended license is GNU Affero General Public License version 3 only, not a separate commercial license or dual-license arrangement.
+- The intended license is GNU Affero General Public License version 3 only (SPDX `AGPL-3.0-only`), not "or later", and not a separate commercial license or dual-license arrangement.
 - The license applies to the repository as a whole unless a future change explicitly scopes a different license for specific files or assets.
 - Adding license information is a documentation and project-governance change; no user-facing product behavior is intended to change.
 - The standard AGPL v3 license text is acceptable without custom legal modifications.

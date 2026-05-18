@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 export const REFRESH_INTERVAL_SECONDS = 5 * 60
 
 export function nextRefreshAt(now = Date.now(), intervalSeconds = REFRESH_INTERVAL_SECONDS) {

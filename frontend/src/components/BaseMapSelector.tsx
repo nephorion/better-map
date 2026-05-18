@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { useEffect, useRef } from 'react'
 import { BASE_MAP_LAYERS, type BaseMapLayer } from '../services/baseMapLayers'
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import { PathLayer, PolygonLayer } from '@deck.gl/layers'

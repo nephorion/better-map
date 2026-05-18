@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
@@ -16,6 +17,7 @@ test('keeps support controls subtle and reachable on desktop', async ({ page }) 
 
   await expect(page.getByRole('button', { name: /donate/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(1)
   await page.getByRole('button', { name: /donate/i }).hover()
   await expect(page.getByText('Donate')).toBeVisible()
@@ -32,6 +34,7 @@ test('keeps support controls reachable on mobile without covering primary contro
 
   await expect(page.getByRole('button', { name: /donate/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
 })

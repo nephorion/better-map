@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import maplibregl from 'maplibre-gl'
 import * as deckModule from '@deck.gl/mapbox'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'

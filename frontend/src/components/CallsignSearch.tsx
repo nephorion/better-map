@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { useState, type FormEvent } from 'react'
 import { isValidCallsign, normalizeCallsign } from '../services/callsign'
 

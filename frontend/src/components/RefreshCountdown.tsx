@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { REFRESH_INTERVAL_SECONDS, formatRemainingTime } from '../services/refreshState'
 
