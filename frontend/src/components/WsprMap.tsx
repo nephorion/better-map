@@ -1,6 +1,6 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import { PathLayer } from '@deck.gl/layers'
+import { PathLayer, PolygonLayer } from '@deck.gl/layers'
 import maplibregl, {
   type Map as MapLibreMap,
   type StyleSpecification,
@@ -11,6 +11,7 @@ import { toMapPaths } from '../services/mapFeatures'
 import { ActivityDetails } from './ActivityDetails'
 import { defaultBaseMapLayer, findBaseMapLayer, type BaseMapLayer } from '../services/baseMapLayers'
 import { readStoredMapView, saveMapView } from '../services/mapView'
+import * as terminatorService from '../services/terminator'
 
 type WsprMapProps = {
   features: ActivityFeature[]
@@ -46,6 +47,14 @@ export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign
   const deckOverlayRef = useRef<MapboxOverlay | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [grayline, setGrayline] = useState(() => {
+    try {
+      return terminatorService.createGraylineTerminator(new Date())
+    } catch {
+      return null
+    }
+  })
+  const lastGraylineRefreshRef = useRef(grayline ? Date.parse(grayline.lastUpdatedAt) : 0)
   const paths = useMemo(() => toMapPaths(features, activeCallsign), [activeCallsign, features])
   const activeSelectedId = features.some((feature) => feature.id === selectedId) ? selectedId : null
   const selected = features.find((feature) => feature.id === activeSelectedId) ?? null
@@ -93,8 +102,32 @@ export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign
     const deckOverlay = deckOverlayRef.current
     if (!map || !deckOverlay || !mapReady) return
 
+    const graylineLayers = grayline
+      ? [
+        new PolygonLayer({
+          id: 'grayline-terminator-overlay',
+          data: grayline.darknessRegion,
+          getPolygon: (polygon) => polygon,
+          getFillColor: [8, 12, 22, 56],
+          stroked: false,
+          filled: true,
+          pickable: false,
+        }),
+        new PathLayer({
+          id: 'grayline-terminator-line',
+          data: grayline.renderedBoundaryPaths.map((path) => ({ observationTime: grayline.observationTime, path })),
+          getPath: (segment) => segment.path,
+          getColor: [210, 214, 224, 130],
+          getWidth: 1,
+          widthMinPixels: 1,
+          pickable: false,
+        }),
+      ]
+      : []
+
     deckOverlay.setProps({
       layers: [
+        ...graylineLayers,
         new PathLayer({
           id: 'wspr-deck-paths',
           data: paths,
@@ -110,7 +143,34 @@ export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign
         }),
       ],
     })
-  }, [activeSelectedId, mapReady, paths])
+  }, [activeSelectedId, grayline, mapReady, paths])
+
+  useEffect(() => {
+    function refreshGrayline() {
+      const now = new Date()
+      try {
+        setGrayline(terminatorService.createGraylineTerminator(now))
+        lastGraylineRefreshRef.current = now.getTime()
+      } catch {
+        // Keep the previous overlay and retry on the next scheduled refresh.
+      }
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refreshGrayline()
+    }, terminatorService.GRAYLINE_REFRESH_INTERVAL_MS)
+
+    function refreshWhenVisible() {
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - lastGraylineRefreshRef.current >= terminatorService.STALE_VISIBILITY_REFRESH_MS) refreshGrayline()
+    }
+
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [])
 
   return (
     <div className="wspr-map" aria-label="WSPR path map">

@@ -54,6 +54,21 @@ test('renders the full-window map without a bottom-left path list', async ({ pag
   await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
 })
 
+test('keeps map and controls usable on mobile-sized viewports', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
+  await page.getByRole('button', { name: 'Set Callsign', exact: true }).click()
+
+  await expect(page.getByLabel('World map')).toBeVisible()
+  await expect(page.locator('.maplibregl-canvas')).toBeVisible()
+  await expect(page.getByRole('button', { name: /active callsign/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
+  await expect(page.getByLabel('Frontend version hash')).not.toBeEmpty()
+})
+
 test('keeps overlay controls usable over the browser-rendered map', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
@@ -66,5 +81,23 @@ test('keeps overlay controls usable over the browser-rendered map', async ({ pag
   await page.getByRole('button', { name: /opentopomap/i }).click()
   await expect(page.getByText(/CC-BY-SA/i)).toHaveCount(0)
   await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
+  await expect(page.getByLabel('Frontend version hash')).not.toBeEmpty()
+})
+
+test('keeps controls usable after simulated visibility return', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
+  await page.getByRole('button', { name: 'Set Callsign', exact: true }).click()
+  await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+
+  await page.getByRole('button', { name: /refresh wspr activity/i }).click()
+  await expect(page.getByRole('button', { name: /active callsign/i })).toHaveText(/VK2DJJ/i)
+  await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
   await expect(page.getByLabel('Frontend version hash')).not.toBeEmpty()
 })

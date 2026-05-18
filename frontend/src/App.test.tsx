@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { ApiClientError } from './services/apiClient'
@@ -277,9 +277,16 @@ test('automatically refreshes when countdown reaches zero', async () => {
   })
   render(<App />)
 
-  await vi.runOnlyPendingTimersAsync()
-  await vi.advanceTimersByTimeAsync(301_000)
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
+  expect(fetchWsprActivity).toHaveBeenCalledTimes(1)
 
-  expect(fetchWsprActivity).toHaveBeenCalledTimes(3)
+  vi.mocked(fetchWsprActivity).mockClear()
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300_000)
+  })
+
+  expect(fetchWsprActivity).toHaveBeenCalledTimes(1)
   vi.useRealTimers()
 })

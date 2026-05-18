@@ -90,4 +90,10 @@ vi.mock('@deck.gl/layers', () => ({
       this.props = props
     }
   },
+  PolygonLayer: class PolygonLayerMock {
+    props: unknown
+    constructor(props: unknown) {
+      this.props = props
+    }
+  },
 }))
