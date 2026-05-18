@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { NEPHORION_URL, SUPPORT_LINK_LABELS } from '../services/supportLinks'
 
 export function NephorionLink() {

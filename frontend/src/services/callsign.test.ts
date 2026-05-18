@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { callsignStorageKey, readStoredCallsign, saveCallsign } from './callsign'
 
 function throwingStorage(): Storage {

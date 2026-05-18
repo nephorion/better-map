@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import './App.css'
 import { useEffect, useRef, useState } from 'react'
 import { ApiClientError } from './services/apiClient'
@@ -8,6 +9,7 @@ import { CallsignOverlay } from './components/CallsignOverlay'
 import { BaseMapSelector } from './components/BaseMapSelector'
 import { DonationPane } from './components/DonationPane'
 import { NephorionLink } from './components/NephorionLink'
+import { SourceLink } from './components/SourceLink'
 import { RefreshCountdown } from './components/RefreshCountdown'
 import { readStoredCallsign, saveCallsign } from './services/callsign'
 import { nextRefreshAt, remainingRefreshSeconds } from './services/refreshState'
@@ -135,6 +137,7 @@ function App() {
           onLoadError={() => setDonationFailed(true)}
         />
       </div>
+      <SourceLink />
       <NephorionLink />
       {promptOpen ? (
         <CallsignPrompt initialValue={callsign ?? ''} onConfirm={confirmCallsign} onDismiss={() => setPromptOpen(false)} />

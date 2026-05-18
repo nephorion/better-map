@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 from fastapi import APIRouter, HTTPException, status
 
 from better_map.models.callsign import CallsignQuery

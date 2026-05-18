@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { useEffect, useRef } from 'react'
 import { KO_FI_EMBED_URL, KO_FI_PAGE_URL, SUPPORT_LINK_LABELS } from '../services/supportLinks'
 

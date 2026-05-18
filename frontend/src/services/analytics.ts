@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 export const GOOGLE_ANALYTICS_ID = 'G-PZ4DB72GNK'
 
 declare global {

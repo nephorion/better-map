@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 const CALLSIGN_PATTERN = /^[A-Z0-9/]{3,12}$/
 const STORAGE_KEY = 'better-map.activeCallsign'
 

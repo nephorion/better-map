@@ -1,5 +1,7 @@
 # Better Map (Working Title)
 
+[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE)
+
 An awesome, modern, and highly interactive mapping tool designed specifically for the HAM radio community.
 
 ## The Vision

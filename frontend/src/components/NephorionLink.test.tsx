@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { render, screen } from '@testing-library/react'
 import { NephorionLink } from './NephorionLink'
 import { NEPHORION_URL } from '../services/supportLinks'

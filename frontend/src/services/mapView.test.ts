@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { defaultMapView, mapViewStorageKey, readStoredMapView, saveMapView } from './mapView'
 
 function throwingStorage(): Storage {

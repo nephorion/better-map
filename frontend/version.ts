@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { execSync } from 'node:child_process'
 
 const VERSION_ENV_KEYS = ['BETTER_MAP_VERSION', 'RAILWAY_GIT_COMMIT_SHA', 'RAILWAY_GIT_COMMIT'] as const

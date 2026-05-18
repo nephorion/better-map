@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
@@ -236,6 +237,19 @@ test('renders Nephorion support link with safe external navigation', () => {
   const link = screen.getByRole('link', { name: /visit nephorion main site/i })
   expect(link).toHaveAttribute('href', 'https://nephorion.com')
   expect(link).toHaveAttribute('target', '_blank')
+})
+
+test('renders AGPL source link with safe external navigation', () => {
+  render(<App />)
+
+  const link = screen.getByRole('link', { name: /source code/i })
+  expect(link).toHaveTextContent('Source')
+  expect(link).toHaveAttribute('href', 'https://github.com/nephorion/better-map')
+  expect(link).toHaveAttribute('target', '_blank')
+  expect(link).toHaveAttribute('rel', 'noreferrer')
+  expect(screen.getByRole('link', { name: /visit nephorion main site/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /donate/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/frontend version hash/i)).toBeInTheDocument()
 })
 
 test('warns when callsign cannot be persisted and blocks duplicate refreshes', async () => {

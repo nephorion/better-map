@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { frontendVersion, loadVersionMetadata } from './versionMetadata'
 
 test('reads configured frontend version and falls back to dev', () => {

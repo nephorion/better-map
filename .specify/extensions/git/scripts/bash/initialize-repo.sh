@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only
 # Git extension: initialize-repo.sh
 # Initialize a Git repository with an initial commit.
 # Customizable — replace this script to add .gitignore templates,

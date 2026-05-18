@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
 .app-shell {
   position: fixed;
   inset: 0;
@@ -473,15 +474,37 @@ button.overlay-panel,
   font-size: 0.72rem;
 }
 
-.nephorion-credit a {
+.source-credit {
+  position: absolute;
+  z-index: 3;
+  right: 12px;
+  bottom: 8px;
+  margin: 0;
+  font-family: var(--mono, ui-monospace, Consolas, monospace);
+  font-size: 0.72rem;
+}
+
+.nephorion-credit a,
+.source-credit a {
   color: inherit;
   text-decoration: none;
 }
 
 .nephorion-credit a:hover,
-.nephorion-credit a:focus-visible {
+.nephorion-credit a:focus-visible,
+.source-credit a:hover,
+.source-credit a:focus-visible {
   color: rgba(255, 255, 255, 0.82);
   outline: none;
+}
+
+.source-credit a:focus-visible {
+  outline: 1px solid rgba(104, 211, 255, 0.7);
+  outline-offset: 3px;
+}
+
+.source-credit a {
+  color: rgba(255, 255, 255, 0.58);
 }
 
 .activity-details {

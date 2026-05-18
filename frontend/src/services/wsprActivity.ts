@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { API_BASE_URL } from './config'
 import { ApiClientError, type ApiErrorCode } from './apiClient'
 

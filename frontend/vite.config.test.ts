@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { resolveAppVersion, shortHash } from './version'
 
 test('shortens version values to twelve characters', () => {
