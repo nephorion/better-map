@@ -53,3 +53,16 @@ test('shows refreshing state while remaining clickable', async () => {
   await user.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
   expect(onRefresh).not.toHaveBeenCalled()
 })
+
+test('cancels queued manual refresh if a refresh starts first', async () => {
+  vi.useFakeTimers()
+  const onRefresh = vi.fn()
+  const { rerender } = render(<RefreshCountdown remainingSeconds={125} refreshing={false} onRefresh={onRefresh} />)
+
+  fireEvent.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
+  rerender(<RefreshCountdown remainingSeconds={125} refreshing onRefresh={onRefresh} />)
+  await vi.advanceTimersByTimeAsync(3000)
+
+  expect(onRefresh).not.toHaveBeenCalled()
+  vi.useRealTimers()
+})

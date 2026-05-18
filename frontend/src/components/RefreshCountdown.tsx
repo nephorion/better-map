@@ -10,6 +10,7 @@ type RefreshCountdownProps = {
 export function RefreshCountdown({ remainingSeconds, refreshing, onRefresh }: RefreshCountdownProps) {
   const [pendingManualRefresh, setPendingManualRefresh] = useState(false)
   const onRefreshRef = useRef(onRefresh)
+  const refreshingRef = useRef(refreshing)
   const progress = refreshing || pendingManualRefresh ? 1 : Math.min(remainingSeconds, REFRESH_INTERVAL_SECONDS) / REFRESH_INTERVAL_SECONDS
   const tooltip = refreshing
     ? 'Refreshing WSPR activity'
@@ -22,18 +23,19 @@ export function RefreshCountdown({ remainingSeconds, refreshing, onRefresh }: Re
   }, [onRefresh])
 
   useEffect(() => {
+    refreshingRef.current = refreshing
+  }, [refreshing])
+
+  useEffect(() => {
     if (!pendingManualRefresh) return
     const timer = window.setTimeout(() => {
       setPendingManualRefresh(false)
+      if (refreshingRef.current) return
       onRefreshRef.current()
     }, 3000)
 
     return () => window.clearTimeout(timer)
   }, [pendingManualRefresh])
-
-  useEffect(() => {
-    if (refreshing) setPendingManualRefresh(false)
-  }, [refreshing])
 
   function queueManualRefresh() {
     if (refreshing || pendingManualRefresh) return
