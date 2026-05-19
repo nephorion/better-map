@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import { ArcLayer, PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
+import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import maplibregl, {
   type Map as MapLibreMap,
   type StyleSpecification,
 } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ActivityFeature } from '../services/wsprActivity'
-import { toMapPaths } from '../services/mapFeatures'
+import { interpolateArc, toMapPaths } from '../services/mapFeatures'
 import { defaultUserConfig, requestWindowToHours, type RequestWindow, type UserConfig } from '../services/userConfig'
 import { filterWsprFeaturesByBand } from '../services/wsprFilters'
 import { ActivityDetails } from './ActivityDetails'
@@ -30,11 +30,17 @@ type PathEndpoint = {
   opacity: number
 }
 
-type ArcSegment = {
+type PathSegment = {
   id: string
   pathId: string
-  sourcePosition: [number, number]
-  targetPosition: [number, number]
+  arc: [number, number][]
+  activityRole: ActivityRole
+  opacity: number
+}
+
+type PulseDot = {
+  id: string
+  position: [number, number]
   activityRole: ActivityRole
   opacity: number
 }
@@ -100,11 +106,20 @@ function opacityForAge(time: string, requestWindow: RequestWindow) {
   return Math.max(MIN_AGE_OPACITY, Math.min(1, 1 - ageRatio))
 }
 
-function arcSegments(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow): ArcSegment[] {
+function pathSegments(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow): PathSegment[] {
   return paths.map((path) => {
     const opacity = opacityForAge(path.properties.time, requestWindow)
-    return { id: path.id, pathId: path.id, sourcePosition: path.coordinates[0], targetPosition: path.coordinates[1], activityRole: path.properties.role, opacity }
+    return { id: path.id, pathId: path.id, arc: path.arc, activityRole: path.properties.role, opacity }
   })
+}
+
+function pulseDots(segments: PathSegment[], t: number, paths: ReturnType<typeof toMapPaths>): PulseDot[] {
+  return segments.map((segment, i) => ({
+    id: `pulse-${segment.id}`,
+    position: interpolateArc(paths[i].arc, t),
+    activityRole: segment.activityRole,
+    opacity: segment.opacity,
+  }))
 }
 
 function pathEndpoints(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow, activeCallsign?: string | null): PathEndpoint[] {
@@ -175,7 +190,7 @@ export function WsprMap({
     [bandFilteredFeatures, effectiveConfig.activityVisibility],
   )
   const paths = useMemo(() => toMapPaths(filteredFeatures, activeCallsign), [activeCallsign, filteredFeatures])
-  const segments = useMemo(() => arcSegments(paths, effectiveConfig.requestWindow), [effectiveConfig.requestWindow, paths])
+  const segments = useMemo(() => pathSegments(paths, effectiveConfig.requestWindow), [effectiveConfig.requestWindow, paths])
   const endpoints = useMemo(() => pathEndpoints(paths, effectiveConfig.requestWindow, activeCallsign), [activeCallsign, effectiveConfig.requestWindow, paths])
   const selectedFeature = filteredFeatures.find((feature) => feature.id === selectedPathId) ?? null
   const baseLayer = findBaseMapLayer(baseLayerId)
@@ -240,71 +255,89 @@ export function WsprMap({
     const deckOverlay = deckOverlayRef.current
     if (!map || !deckOverlay || !mapReady) return
 
-    const graylineLayers = grayline
-      ? [
-        new PolygonLayer({
-          id: 'grayline-terminator-overlay',
-          data: grayline.darknessRegion,
-          getPolygon: (polygon) => polygon,
-          getFillColor: [8, 12, 22, 56],
-          stroked: false,
-          filled: true,
-          pickable: false,
-        }),
-        new PathLayer({
-          id: 'grayline-terminator-line',
-          data: grayline.renderedBoundaryPaths.map((path) => ({ observationTime: grayline.observationTime, path })),
-          getPath: (segment) => segment.path,
-          getColor: [210, 214, 224, 130],
-          getWidth: 1,
-          widthMinPixels: 1,
-          pickable: false,
-        }),
-      ]
-      : []
+    const overlay = deckOverlay
+    const PULSE_DURATION_MS = 3000
+    let animationId = 0
 
-    deckOverlay.setProps({
-      layers: [
-        ...graylineLayers,
-        new ArcLayer<ArcSegment>({
-          id: 'wspr-deck-arcs',
-          data: segments,
-          greatCircle: true,
-          numSegments: 50,
-          getSourcePosition: (segment) => segment.sourcePosition,
-          getTargetPosition: (segment) => segment.targetPosition,
-          getSourceColor: (segment) => colorForActivityRole(segment.activityRole, segment.opacity),
-          getTargetColor: (segment) => colorForActivityRole(segment.activityRole, segment.opacity),
-          getWidth: 1.5,
-          widthMinPixels: 1,
-          getHeight: 0.5,
-          getTilt: 0,
-          pickable: false,
-          transitions: {
-            getSourcePosition: { duration: 800, type: 'spring', stiffness: 0.3, damping: 0.6 },
-            getTargetPosition: { duration: 800, type: 'spring', stiffness: 0.3, damping: 0.6 },
-            getWidth: { duration: 600 },
-          },
-        }),
-        new ScatterplotLayer<PathEndpoint>({
-          id: 'wspr-deck-endpoints',
-          data: endpoints,
-          getPosition: (endpoint) => endpoint.coordinates,
-          getFillColor: [255, 255, 255, 0],
-          getLineColor: (endpoint) => colorForActivityRole(endpoint.activityRole, endpoint.opacity),
-          getRadius: 4,
-          radiusUnits: 'pixels',
-          stroked: true,
-          filled: false,
-          lineWidthMinPixels: 1,
-          pickable: true,
-          onClick: (info) => {
-            if (info.object) setSelectedPathId(info.object.pathId)
-          },
-        }),
-      ],
-    })
-  }, [endpoints, grayline, mapReady, segments])
+    function renderLayers() {
+      const t = (Date.now() % PULSE_DURATION_MS) / PULSE_DURATION_MS
+      const dots = pulseDots(segments, t, paths)
+
+      const graylineLayers = grayline
+        ? [
+          new PolygonLayer({
+            id: 'grayline-terminator-overlay',
+            data: grayline.darknessRegion,
+            getPolygon: (polygon) => polygon,
+            getFillColor: [8, 12, 22, 56],
+            stroked: false,
+            filled: true,
+            pickable: false,
+          }),
+          new PathLayer({
+            id: 'grayline-terminator-line',
+            data: grayline.renderedBoundaryPaths.map((path) => ({ observationTime: grayline.observationTime, path })),
+            getPath: (segment) => segment.path,
+            getColor: [210, 214, 224, 130],
+            getWidth: 1,
+            widthMinPixels: 1,
+            pickable: false,
+          }),
+        ]
+        : []
+
+      overlay.setProps({
+        layers: [
+          ...graylineLayers,
+          new PathLayer<PathSegment>({
+            id: 'wspr-deck-paths',
+            data: segments,
+            getPath: (segment) => segment.arc,
+            getColor: (segment) => colorForActivityRole(segment.activityRole, segment.opacity),
+            getWidth: 1.5,
+            widthMinPixels: 1,
+            pickable: false,
+          }),
+          ...(dots.length > 0
+            ? [
+              new ScatterplotLayer<PulseDot>({
+                id: 'wspr-deck-pulse',
+                data: dots,
+                getPosition: (dot) => dot.position,
+                getFillColor: (dot) => colorForActivityRole(dot.activityRole, Math.min(1, dot.opacity + 0.3)),
+                getRadius: 3,
+                radiusUnits: 'pixels',
+                stroked: false,
+                filled: true,
+                pickable: false,
+              }),
+            ]
+            : []),
+          new ScatterplotLayer<PathEndpoint>({
+            id: 'wspr-deck-endpoints',
+            data: endpoints,
+            getPosition: (endpoint) => endpoint.coordinates,
+            getFillColor: [255, 255, 255, 0],
+            getLineColor: (endpoint) => colorForActivityRole(endpoint.activityRole, endpoint.opacity),
+            getRadius: 4,
+            radiusUnits: 'pixels',
+            stroked: true,
+            filled: false,
+            lineWidthMinPixels: 1,
+            pickable: true,
+            onClick: (info) => {
+              if (info.object) setSelectedPathId(info.object.pathId)
+            },
+          }),
+        ],
+      })
+
+      animationId = requestAnimationFrame(renderLayers)
+    }
+
+    renderLayers()
+    return () => cancelAnimationFrame(animationId)
+  }, [endpoints, grayline, mapReady, paths, segments])
 
   useEffect(() => {
     function refreshGrayline() {

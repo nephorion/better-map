@@ -85,12 +85,6 @@ vi.mock('@deck.gl/mapbox', () => {
 })
 
 vi.mock('@deck.gl/layers', () => ({
-  ArcLayer: class ArcLayerMock {
-    props: unknown
-    constructor(props: unknown) {
-      this.props = props
-    }
-  },
   PathLayer: class PathLayerMock {
     props: unknown
     constructor(props: unknown) {
