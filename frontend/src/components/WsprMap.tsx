@@ -370,7 +370,7 @@ export function WsprMap({
             onHover: (info) => {
               hoveredEndpointRef.current = (info.object as PathEndpoint) ?? null
               const canvas = containerRef.current
-              if (canvas) canvas.style.cursor = info.object ? 'pointer' : ''
+              if (canvas) canvas.style.cursor = info.object ? 'default' : ''
             },
           }),
         ],
