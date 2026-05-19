@@ -114,12 +114,16 @@ function pathSegments(paths: ReturnType<typeof toMapPaths>, requestWindow: Reque
 }
 
 function pulseDots(segments: PathSegment[], t: number, paths: ReturnType<typeof toMapPaths>): PulseDot[] {
-  return segments.map((segment, i) => ({
-    id: `pulse-${segment.id}`,
-    position: interpolateArc(paths[i].arc, t),
-    activityRole: segment.activityRole,
-    opacity: segment.opacity,
-  }))
+  return segments.map((segment, i) => {
+    // Spots flow outward from the active callsign; heard flows inward.
+    const directed = segment.activityRole === 'receiver' ? 1 - t : t
+    return {
+      id: `pulse-${segment.id}`,
+      position: interpolateArc(paths[i].arc, directed),
+      activityRole: segment.activityRole,
+      opacity: segment.opacity,
+    }
+  })
 }
 
 function pathEndpoints(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow, activeCallsign?: string | null): PathEndpoint[] {

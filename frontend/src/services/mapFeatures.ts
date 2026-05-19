@@ -46,10 +46,13 @@ function shortestLongitudePath(coordinates: [[number, number], [number, number]]
 function greatCircleArc(start: [number, number], end: [number, number], segments: number): [number, number][] {
   const [lng1, lat1] = start
   const [lng2, lat2] = end
+  // Use canonical longitudes [-180,180] for the spherical math so atan2 is consistent.
+  const canonLng1 = ((lng1 % 360) + 540) % 360 - 180
+  const canonLng2 = ((lng2 % 360) + 540) % 360 - 180
   const phi1 = lat1 * DEG_TO_RAD
   const phi2 = lat2 * DEG_TO_RAD
-  const lambda1 = lng1 * DEG_TO_RAD
-  const lambda2 = lng2 * DEG_TO_RAD
+  const lambda1 = canonLng1 * DEG_TO_RAD
+  const lambda2 = canonLng2 * DEG_TO_RAD
   const dPhi = phi2 - phi1
   const dLambda = lambda2 - lambda1
 
@@ -59,6 +62,7 @@ function greatCircleArc(start: [number, number], end: [number, number], segments
   if (d < 1e-9) return [start, end]
 
   const points: [number, number][] = []
+  let prevLng = lng1
   for (let i = 0; i <= segments; i++) {
     const f = i / segments
     const A = Math.sin((1 - f) * d) / Math.sin(d)
@@ -67,8 +71,13 @@ function greatCircleArc(start: [number, number], end: [number, number], segments
     const y = A * Math.cos(phi1) * Math.sin(lambda1) + B * Math.cos(phi2) * Math.sin(lambda2)
     const z = A * Math.sin(phi1) + B * Math.sin(phi2)
     const lat = Math.atan2(z, Math.sqrt(x * x + y * y)) * RAD_TO_DEG
-    const lng = Math.atan2(y, x) * RAD_TO_DEG
+    let lng = Math.atan2(y, x) * RAD_TO_DEG
+    // Unwrap longitude so it stays continuous with the previous point,
+    // preventing visual jumps when the path crosses the antimeridian.
+    while (lng - prevLng > 180) lng -= 360
+    while (lng - prevLng < -180) lng += 360
     points.push([lng, lat])
+    prevLng = lng
   }
 
   // Snap first and last point exactly to inputs to avoid floating-point drift.

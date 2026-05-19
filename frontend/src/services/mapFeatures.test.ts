@@ -119,6 +119,35 @@ test('draws the shortest westward path from Australia to Europe', () => {
   expect(toMapPaths([feature], 'VK2DJJ')[0].coordinates).toEqual([[151, -34], [10, 50]])
 })
 
+test('keeps arc longitudes continuous across the antimeridian', () => {
+  const feature: ActivityFeature = {
+    id: '1',
+    type: 'Feature',
+    geometry: { type: 'LineString', coordinates: [[151, -34], [-122, 37]] },
+    properties: {
+      time: '2026-05-16T10:30:00Z',
+      tx_sign: 'VK2DJJ',
+      rx_sign: 'W6ABC',
+      distance_km: 12000,
+      frequency_hz: 14095600,
+      band: '20m',
+      snr_db: -18,
+      power_dbm: 30,
+      role: 'transmitter',
+    },
+  }
+
+  const paths = toMapPaths([feature], 'VK2DJJ')
+  const arc = paths[0].arc
+  // No consecutive points should jump more than ~10 degrees apart.
+  for (let i = 1; i < arc.length; i++) {
+    expect(Math.abs(arc[i][0] - arc[i - 1][0])).toBeLessThan(10)
+  }
+  // The arc should go eastward past 180 rather than wrapping west.
+  expect(arc[0][0]).toBe(151)
+  expect(arc[arc.length - 1][0]).toBe(238)
+})
+
 test('returns a two-point arc for same-location paths', () => {
   const feature: ActivityFeature = {
     id: '1',
