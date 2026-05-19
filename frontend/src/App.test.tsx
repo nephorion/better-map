@@ -74,7 +74,7 @@ test('loads truncated successful results without a map notice panel', async () =
 
   await setCallsign(user)
 
-  expect(fetchWsprActivity).toHaveBeenLastCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
+  expect(fetchWsprActivity).toHaveBeenLastCalledWith('VK2DJJ', { amount: 10, unit: 'days' }, 1000)
   expect(screen.queryByText(/showing only the most recent 1,000 records/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/showing the most recent 1,000 wspr paths/i)).not.toBeInTheDocument()
 })
@@ -94,7 +94,7 @@ test('loads non-truncated successful results without a success status panel', as
 
   await setCallsign(user)
 
-  expect(fetchWsprActivity).toHaveBeenLastCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
+  expect(fetchWsprActivity).toHaveBeenLastCalledWith('VK2DJJ', { amount: 10, unit: 'days' }, 1000)
   expect(screen.queryByText(/showing 2 wspr paths/i)).not.toBeInTheDocument()
 })
 
@@ -152,7 +152,7 @@ test('loads immediately for returning users with a saved callsign', async () => 
   render(<App />)
   await vi.runOnlyPendingTimersAsync()
 
-  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
+  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' }, 1000)
   expect(screen.queryByRole('dialog', { name: /map configuration/i })).not.toBeInTheDocument()
   vi.useRealTimers()
 })
@@ -200,7 +200,7 @@ test('changes base map, reopens configuration panel, and refreshes manually', as
   fireEvent.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
   expect(fetchWsprActivity).toHaveBeenCalled()
   await vi.advanceTimersByTimeAsync(3000)
-  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
+  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' }, 1000)
   vi.useRealTimers()
 })
 
@@ -306,7 +306,7 @@ test('warns when callsign cannot be persisted and blocks duplicate refreshes', a
   render(<App />)
 
   await setCallsign(user)
-  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
+  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' }, 1000)
 
   resolveLookup({
     callsign: 'VK2DJJ',

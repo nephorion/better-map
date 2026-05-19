@@ -16,6 +16,7 @@ export type UserConfig = {
   locationGrid: string
   timeZone: string
   requestWindow: RequestWindow
+  resultLimit: number
   activityVisibility: ActivityVisibility
   bandSelection: Selection<BandId>
   modeSelection: Selection<ModeId>
@@ -89,6 +90,9 @@ export type BandId = (typeof BAND_OPTIONS)[number]['id']
 export type ModeId = (typeof MODE_OPTIONS)[number]['id']
 
 const DEFAULT_REQUEST_WINDOW: RequestWindow = { amount: 10, unit: 'days' }
+const DEFAULT_RESULT_LIMIT = 1000
+const MIN_RESULT_LIMIT = 1
+const MAX_RESULT_LIMIT = 5000
 const DEFAULT_ACTIVITY_VISIBILITY: ActivityVisibility = { showSpots: true, showHeard: true }
 const FALLBACK_TIME_ZONE = 'UTC'
 const MAX_REQUEST_WINDOW_HOURS = 24 * 30
@@ -102,6 +106,7 @@ export function defaultUserConfig(callsign = ''): UserConfig {
     locationGrid: '',
     timeZone: defaultTimeZone(),
     requestWindow: DEFAULT_REQUEST_WINDOW,
+    resultLimit: DEFAULT_RESULT_LIMIT,
     activityVisibility: DEFAULT_ACTIVITY_VISIBILITY,
     bandSelection: { kind: 'mixed', values: [] },
     modeSelection: { kind: 'mixed', values: [] },
@@ -144,6 +149,13 @@ export function normalizeRequestWindow(value: Partial<RequestWindow> | null | un
 export function requestWindowToHours(value: RequestWindow) {
   const normalized = normalizeRequestWindow(value)
   return normalized.unit === 'days' ? normalized.amount * 24 : normalized.amount
+}
+
+export function normalizeResultLimit(value: unknown): number {
+  if (value == null || value === '') return DEFAULT_RESULT_LIMIT
+  const num = Number(value)
+  if (!Number.isFinite(num)) return DEFAULT_RESULT_LIMIT
+  return Math.min(Math.max(Math.floor(num), MIN_RESULT_LIMIT), MAX_RESULT_LIMIT)
 }
 
 export function normalizeOptionalCallsign(value: string) {
@@ -189,6 +201,7 @@ type RawStoredConfig = Partial<{
   locationGrid: unknown
   timeZone: unknown
   requestWindow: Partial<RequestWindow>
+  resultLimit: unknown
   activityVisibility: Partial<ActivityVisibility>
   bandSelection: Partial<Selection<string>>
   modeSelection: Partial<Selection<string>>
@@ -206,6 +219,7 @@ export function normalizeUserConfig(value: RawStoredConfig, fallbackCallsign = '
     locationGrid: isValidMaidenhead(locationGrid) ? locationGrid : '',
     timeZone: normalizeTimeZone(value.timeZone),
     requestWindow: normalizeRequestWindow(value.requestWindow),
+    resultLimit: normalizeResultLimit(value.resultLimit),
     activityVisibility: normalizeActivityVisibility(value.activityVisibility),
     bandSelection: normalizeBandSelection(selectionValues(value.bandSelection)),
     modeSelection: normalizeModeSelection(selectionValues(value.modeSelection)),

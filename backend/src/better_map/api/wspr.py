@@ -17,9 +17,10 @@ router = APIRouter(prefix="/api/wspr", tags=["wspr"])
 async def get_activity(
     callsign: str | None = Query(default=None),
     window_hours: int | None = Query(default=None),
+    limit: int | None = Query(default=None),
 ) -> dict[str, object]:
     try:
-        query = CallsignQuery.parse(callsign, window_hours)
+        query = CallsignQuery.parse(callsign, window_hours, limit)
         result = await WsprLiveProvider().fetch_activity(query)
     except ValueError as exc:
         raise HTTPException(

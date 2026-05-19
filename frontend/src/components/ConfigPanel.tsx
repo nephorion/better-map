@@ -14,6 +14,7 @@ import {
   normalizeModeSelection,
   normalizeOptionalCallsign,
   normalizeRequestWindow,
+  normalizeResultLimit,
   normalizeTimeZone,
   validateOptionalCallsign,
   isValidTimeZone,
@@ -81,6 +82,7 @@ export function ConfigPanel({ value, firstRun = false, onSave, onClose }: Config
   const [timeZone, setTimeZone] = useState(value.timeZone)
   const [requestWindowAmount, setRequestWindowAmount] = useState(String(value.requestWindow.amount))
   const [requestWindowUnit, setRequestWindowUnit] = useState<RequestWindowUnit>(value.requestWindow.unit)
+  const [resultLimit, setResultLimit] = useState(String(value.resultLimit))
   const [showSpots, setShowSpots] = useState(value.activityVisibility.showSpots)
   const [showHeard, setShowHeard] = useState(value.activityVisibility.showHeard)
   const [bandValues, setBandValues] = useState<string[]>(() => selectionToInput(value.bandSelection))
@@ -91,7 +93,9 @@ export function ConfigPanel({ value, firstRun = false, onSave, onClose }: Config
   const timeZoneValid = isValidTimeZone(timeZone)
   const requestWindowAmountNumber = Number(requestWindowAmount)
   const requestWindowValid = Number.isInteger(requestWindowAmountNumber) && requestWindowAmountNumber >= 1
-  const canSave = callsignValid && gridValid && timeZoneValid && requestWindowValid
+  const resultLimitNumber = Number(resultLimit)
+  const resultLimitValid = Number.isInteger(resultLimitNumber) && resultLimitNumber >= 1 && resultLimitNumber <= 5000
+  const canSave = callsignValid && gridValid && timeZoneValid && requestWindowValid && resultLimitValid
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -101,6 +105,7 @@ export function ConfigPanel({ value, firstRun = false, onSave, onClose }: Config
       locationGrid: normalizedGrid,
       timeZone: normalizeTimeZone(timeZone),
       requestWindow: normalizeRequestWindow({ amount: requestWindowAmountNumber, unit: requestWindowUnit }),
+      resultLimit: normalizeResultLimit(resultLimitNumber),
       activityVisibility: { showSpots, showHeard },
       bandSelection: normalizeBandSelection(bandValues),
       modeSelection: normalizeModeSelection(modeValues),
@@ -115,7 +120,10 @@ export function ConfigPanel({ value, firstRun = false, onSave, onClose }: Config
             <p className="eyebrow">{firstRun ? 'First run setup' : 'Map preferences'}</p>
             <h2>Configuration</h2>
           </div>
-          <button type="button" className="base-map-dismiss" onClick={onClose}>Dismiss</button>
+          <div className="config-panel-actions">
+            <button type="submit" disabled={!canSave}>Save configuration</button>
+            <button type="button" className="secondary-button" onClick={onClose}>Dismiss</button>
+          </div>
         </div>
 
         <label className="config-field" htmlFor="config-callsign">
@@ -183,6 +191,20 @@ export function ConfigPanel({ value, firstRun = false, onSave, onClose }: Config
           {!requestWindowValid ? <p className="field-error">Enter at least 1 hour or day.</p> : null}
         </fieldset>
 
+        <label className="config-field" htmlFor="config-result-limit">
+          <span>Result limit</span>
+          <input
+            id="config-result-limit"
+            type="number"
+            min="1"
+            max="5000"
+            step="1"
+            value={resultLimit}
+            onChange={(event) => setResultLimit(event.target.value)}
+          />
+        </label>
+        {!resultLimitValid ? <p className="field-error">Enter a number between 1 and 5000.</p> : null}
+
         <fieldset className="config-option-group">
           <legend>WSPR activity</legend>
           <label className="config-check">
@@ -205,10 +227,6 @@ export function ConfigPanel({ value, firstRun = false, onSave, onClose }: Config
 
         <OptionGroup<BandId> legend="Bands" name="config-bands" options={BAND_OPTIONS} values={bandValues} onChange={setBandValues} />
         <OptionGroup<ModeId> legend="Modes" name="config-modes" options={MODE_OPTIONS} values={modeValues} onChange={setModeValues} />
-
-        <div className="button-row">
-          <button type="submit" disabled={!canSave}>Save configuration</button>
-        </div>
       </form>
     </div>
   )

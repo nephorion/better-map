@@ -123,6 +123,23 @@ test('saves spot and heard visibility toggles', async () => {
   }))
 })
 
+test('saves and validates result limit', async () => {
+  const user = userEvent.setup()
+  const onSave = vi.fn()
+  render(<ConfigPanel value={defaultUserConfig()} onSave={onSave} onClose={vi.fn()} />)
+
+  await user.clear(screen.getByLabelText(/result limit/i))
+  await user.type(screen.getByLabelText(/result limit/i), '500')
+  await user.click(screen.getByRole('button', { name: /save configuration/i }))
+
+  expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ resultLimit: 500 }))
+
+  await user.clear(screen.getByLabelText(/result limit/i))
+  await user.type(screen.getByLabelText(/result limit/i), '0')
+  expect(screen.getByText(/between 1 and 5000/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /save configuration/i })).toBeDisabled()
+})
+
 test('requires a positive WSPR request window', async () => {
   const user = userEvent.setup()
   render(<ConfigPanel value={defaultUserConfig()} onSave={vi.fn()} onClose={vi.fn()} />)

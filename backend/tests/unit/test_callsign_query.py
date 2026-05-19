@@ -35,3 +35,15 @@ def test_callsign_query_rejects_invalid_input(value: str) -> None:
 def test_callsign_query_rejects_invalid_window_hours(window_hours: int) -> None:
     with pytest.raises(ValueError):
         CallsignQuery.parse("VK2DJJ", window_hours)
+
+
+def test_callsign_query_accepts_custom_limit() -> None:
+    query = CallsignQuery.parse("VK2DJJ", None, 500)
+
+    assert query.limit == 500
+
+
+@pytest.mark.parametrize("limit", [0, 5001])
+def test_callsign_query_rejects_invalid_limit(limit: int) -> None:
+    with pytest.raises(ValueError):
+        CallsignQuery.parse("VK2DJJ", None, limit)

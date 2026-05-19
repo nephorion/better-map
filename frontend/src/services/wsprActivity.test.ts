@@ -27,6 +27,13 @@ test('fetches activity results', async () => {
   expect(fetch).toHaveBeenCalledWith('/api/wspr/activity?callsign=VK2DJJ&window_hours=6')
 })
 
+test('passes result limit as query parameter', async () => {
+  mockFetch(Response.json(successPayload))
+
+  await expect(fetchWsprActivity('VK2DJJ', { amount: 6, unit: 'hours' }, 500)).resolves.toEqual(successPayload)
+  expect(fetch).toHaveBeenCalledWith('/api/wspr/activity?callsign=VK2DJJ&window_hours=6&limit=500')
+})
+
 test('fetches general activity results without a callsign query', async () => {
   mockFetch(Response.json({ ...successPayload, callsign: '' }))
 

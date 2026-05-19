@@ -10,6 +10,7 @@ import {
   normalizeModeSelection,
   normalizeActivityVisibility,
   normalizeRequestWindow,
+  normalizeResultLimit,
   normalizeTimeZone,
   requestWindowToHours,
   readUserConfig,
@@ -28,6 +29,7 @@ test('provides defaults with optional callsign and Mixed selections', () => {
     locationGrid: '',
     timeZone: expect.any(String),
     requestWindow: { amount: 10, unit: 'days' },
+    resultLimit: 1000,
     activityVisibility: { showSpots: true, showHeard: true },
     bandSelection: { kind: 'mixed', values: [] },
     modeSelection: { kind: 'mixed', values: [] },
@@ -55,6 +57,17 @@ test('normalizes WSPR request windows', () => {
   expect(normalizeRequestWindow({ amount: 999, unit: 'hours' })).toEqual({ amount: 720, unit: 'hours' })
   expect(normalizeRequestWindow({ amount: 0, unit: 'days' })).toEqual({ amount: 1, unit: 'days' })
   expect(requestWindowToHours({ amount: 2, unit: 'days' })).toBe(48)
+})
+
+test('normalizes result limit values', () => {
+  expect(normalizeResultLimit(500)).toBe(500)
+  expect(normalizeResultLimit(1000)).toBe(1000)
+  expect(normalizeResultLimit(0)).toBe(1)
+  expect(normalizeResultLimit(-10)).toBe(1)
+  expect(normalizeResultLimit(9999)).toBe(5000)
+  expect(normalizeResultLimit(null)).toBe(1000)
+  expect(normalizeResultLimit('abc')).toBe(1000)
+  expect(normalizeResultLimit(2.7)).toBe(2)
 })
 
 test('defines required amateur band and mode options', () => {
@@ -85,6 +98,7 @@ test('persists, reads, and normalizes user configuration', () => {
     locationGrid: 'qf56od',
     timeZone: 'Australia/Sydney',
     requestWindow: { amount: 12, unit: 'hours' },
+    resultLimit: 500,
     activityVisibility: { showSpots: true, showHeard: false },
     bandSelection: { kind: 'specific', values: ['20m'] },
     modeSelection: { kind: 'specific', values: ['wspr'] },
@@ -96,6 +110,7 @@ test('persists, reads, and normalizes user configuration', () => {
     locationGrid: 'QF56OD',
     timeZone: 'Australia/Sydney',
     requestWindow: { amount: 12, unit: 'hours' },
+    resultLimit: 500,
     activityVisibility: { showSpots: true, showHeard: false },
   })
   expect(readUserConfig().config).toEqual(saved.config)
@@ -123,6 +138,7 @@ test('normalizes malformed stored selection and location shapes', () => {
     locationGrid: '',
     timeZone: defaultUserConfig().timeZone,
     requestWindow: { amount: 10, unit: 'days' },
+    resultLimit: 1000,
     activityVisibility: { showSpots: true, showHeard: true },
     bandSelection: { kind: 'specific', values: ['20m'] },
     modeSelection: { kind: 'mixed', values: [] },

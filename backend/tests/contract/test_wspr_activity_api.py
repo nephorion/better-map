@@ -75,6 +75,21 @@ def test_activity_endpoint_returns_general_lookup_without_callsign(
     assert response.json()["callsign"] == ""
 
 
+def test_activity_endpoint_accepts_custom_limit(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("better_map.api.wspr.WsprLiveProvider", lambda: FakeProvider())
+
+    response = TestClient(app).get("/api/wspr/activity?callsign=vk2djj&limit=500")
+
+    assert response.status_code == 200
+
+
+def test_activity_endpoint_rejects_invalid_limit() -> None:
+    response = TestClient(app).get("/api/wspr/activity?callsign=VK2DJJ&limit=0")
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "invalid_request"
+
+
 def test_activity_endpoint_rejects_invalid_callsign() -> None:
     response = TestClient(app).get("/api/wspr/activity?callsign=bad callsign")
 

@@ -44,14 +44,14 @@ function App() {
   const activeRequest = useRef<string | null>(null)
 
   const loadActivity = useCallback(async (activeCallsign: string | null, config: UserConfig) => {
-    const requestKey = `${activeCallsign || '__general__'}:${config.requestWindow.amount}:${config.requestWindow.unit}`
+    const requestKey = `${activeCallsign || '__general__'}:${config.requestWindow.amount}:${config.requestWindow.unit}:${config.resultLimit}`
     /* v8 ignore next -- Refresh controls are disabled while a matching request is active. */
     if (activeRequest.current === requestKey) return
     activeRequest.current = requestKey
     setLoading(true)
     setStatus(activeCallsign ? `Loading WSPR activity for ${activeCallsign}...` : 'Loading general WSPR activity...')
     try {
-      const lookup = await fetchWsprActivity(activeCallsign, config.requestWindow)
+      const lookup = await fetchWsprActivity(activeCallsign, config.requestWindow, config.resultLimit)
       setResult(lookup)
       setStatus('')
     } catch (error) {

@@ -40,11 +40,12 @@ type ErrorPayload = {
   }
 }
 
-export async function fetchWsprActivity(callsign?: string | null, requestWindow?: RequestWindow): Promise<ActivityLookupResult> {
+export async function fetchWsprActivity(callsign?: string | null, requestWindow?: RequestWindow, resultLimit?: number): Promise<ActivityLookupResult> {
   const normalized = callsign?.trim() ?? ''
   const params = new URLSearchParams()
   if (normalized) params.set('callsign', normalized)
   if (requestWindow) params.set('window_hours', String(requestWindowToHours(requestWindow)))
+  if (resultLimit != null) params.set('limit', String(resultLimit))
   const query = params.toString() ? `?${params}` : ''
   const response = await fetch(`${API_BASE_URL}/api/wspr/activity${query}`)
 
