@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/version', async (route) => {
     await route.fulfill({ json: { short_hash: 'e2etest' } })
   })
-  await page.route('**/api/wspr/activity?**', async (route) => {
+  await page.route('**/api/wspr/activity**', async (route) => {
     await route.fulfill({ json: { callsign: 'VK2DJJ', window_days: 10, source: 'wspr.live', count: 0, truncated: false, features: [] } })
   })
 })
@@ -17,7 +17,7 @@ test('keeps support controls subtle and reachable on desktop', async ({ page }) 
 
   await expect(page.getByRole('button', { name: /donate/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /source code.*frontend version hash/i })).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(1)
   await page.getByRole('button', { name: /donate/i }).hover()
   await expect(page.getByText('Donate')).toBeVisible()
@@ -30,11 +30,11 @@ test('keeps support controls reachable on mobile without covering primary contro
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
-  await page.getByRole('button', { name: 'Set Callsign', exact: true }).click()
+  await page.getByRole('button', { name: /save configuration/i }).click()
 
   await expect(page.getByRole('button', { name: /donate/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /source code.*frontend version hash/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
 })

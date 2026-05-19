@@ -5,8 +5,10 @@ const maplibreMocks = {
   addControl: vi.fn(),
   addLayer: vi.fn(),
   addSource: vi.fn(),
+  canvas: document.createElement('canvas'),
   extend: vi.fn(),
   fitBounds: vi.fn(),
+  getCanvas: vi.fn(() => maplibreMocks.canvas),
   getContainer: vi.fn(() => document.createElement('div')),
   getSource: vi.fn(),
   getCenter: vi.fn(() => ({ lng: 151, lat: -34 })),
@@ -31,6 +33,7 @@ vi.mock('maplibre-gl', () => {
     addLayer = maplibreMocks.addLayer
     addSource = maplibreMocks.addSource
     fitBounds = maplibreMocks.fitBounds
+    getCanvas = maplibreMocks.getCanvas
     getCenter = maplibreMocks.getCenter
     getContainer = maplibreMocks.getContainer
     getSource = maplibreMocks.getSource
@@ -92,6 +95,12 @@ vi.mock('@deck.gl/layers', () => ({
     }
   },
   PolygonLayer: class PolygonLayerMock {
+    props: unknown
+    constructor(props: unknown) {
+      this.props = props
+    }
+  },
+  ScatterplotLayer: class ScatterplotLayerMock {
     props: unknown
     constructor(props: unknown) {
       this.props = props

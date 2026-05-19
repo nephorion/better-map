@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote_plus
 
@@ -41,14 +41,14 @@ class WsprLiveProvider:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(f"{self.base_url}?query={quote_plus(sql)}")
         except httpx.TimeoutException as exc:
-            logger.warning("WSPR provider timeout for callsign=%s", query.callsign)
+            logger.warning("WSPR provider timeout for callsign=%s", query.callsign or "general")
             raise WsprProviderTimeout("WSPR lookup timed out.") from exc
         except httpx.HTTPError as exc:
-            logger.warning("WSPR provider unavailable for callsign=%s", query.callsign)
+            logger.warning("WSPR provider unavailable for callsign=%s", query.callsign or "general")
             raise WsprProviderError("WSPR provider is unavailable.") from exc
 
         if response.status_code == 429:
-            logger.warning("WSPR provider rate limited callsign=%s", query.callsign)
+            logger.warning("WSPR provider rate limited callsign=%s", query.callsign or "general")
             raise WsprProviderRateLimited("WSPR provider rate limit reached.")
         if response.status_code >= 500:
             logger.warning("WSPR provider unavailable status=%s", response.status_code)
@@ -58,40 +58,61 @@ class WsprLiveProvider:
             payload = response.json()
             rows = payload["data"]
         except (ValueError, KeyError, TypeError) as exc:
-            logger.warning("WSPR provider invalid data for callsign=%s", query.callsign)
+            logger.warning(
+                "WSPR provider invalid data for callsign=%s",
+                query.callsign or "general",
+            )
             raise WsprProviderInvalidData("WSPR provider returned invalid data.") from exc
 
         try:
             activities = self._to_activities(rows, query.callsign)
         except (KeyError, TypeError, ValueError) as exc:
-            logger.warning("WSPR provider invalid row data for callsign=%s", query.callsign)
+            logger.warning(
+                "WSPR provider invalid row data for callsign=%s",
+                query.callsign or "general",
+            )
             raise WsprProviderInvalidData("WSPR provider returned invalid data.") from exc
         deduped = self._dedupe(activities)
         truncated = len(deduped) > query.limit
         selected = deduped[: query.limit]
         if truncated:
-            logger.info("WSPR result truncated callsign=%s limit=%s", query.callsign, query.limit)
+            logger.info(
+                "WSPR result truncated callsign=%s limit=%s",
+                query.callsign or "general",
+                query.limit,
+            )
 
         return ActivityLookupResult(
-            callsign=query.callsign,
+            callsign=query.callsign or "",
+            window_hours=query.window_hours,
+            window_days=query.window_days,
             count=len(selected),
             truncated=truncated,
             features=[activity.to_feature() for activity in selected],
         )
 
     def _build_query(self, query: CallsignQuery) -> str:
-        callsign = query.callsign.replace("'", "''")
+        callsign_filter = ""
+        if query.callsign:
+            callsign = query.callsign.replace("'", "''")
+            callsign_filter = (
+                f"AND (upper(tx_sign) = '{callsign}' OR upper(rx_sign) = '{callsign}') "
+            )
         return (
             "SELECT id,time,band,rx_sign,rx_lat,rx_lon,tx_sign,tx_lat,tx_lon,"
             "distance,azimuth,frequency,power,snr "
             "FROM wspr.rx "
-            f"WHERE time >= now() - INTERVAL {query.window_days} DAY "
-            f"AND (upper(tx_sign) = '{callsign}' OR upper(rx_sign) = '{callsign}') "
+            f"WHERE time >= now('UTC') - INTERVAL {query.window_hours} HOUR "
+            f"{callsign_filter}"
             "ORDER BY time DESC "
             f"LIMIT {query.limit + 1} FORMAT JSON"
         )
 
-    def _to_activities(self, rows: list[dict[str, Any]], callsign: str) -> list[WsprActivity]:
+    def _to_activities(
+        self,
+        rows: list[dict[str, Any]],
+        callsign: str | None,
+    ) -> list[WsprActivity]:
         activities: list[WsprActivity] = []
         for row in rows:
             try:
@@ -154,7 +175,9 @@ class WsprLiveProvider:
             )
         )
 
-    def _role(self, callsign: str, tx_sign: str, rx_sign: str) -> Role:
+    def _role(self, callsign: str | None, tx_sign: str, rx_sign: str) -> Role:
+        if callsign is None:
+            return "both"
         if tx_sign == callsign and rx_sign == callsign:
             return "both"
         if tx_sign == callsign:
@@ -163,8 +186,12 @@ class WsprLiveProvider:
 
     def _parse_time(self, value: Any) -> datetime:
         if isinstance(value, datetime):
-            return value
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            parsed = value
+        else:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
 
     def _optional_int(self, value: Any) -> int | None:
         return None if value is None else int(value)

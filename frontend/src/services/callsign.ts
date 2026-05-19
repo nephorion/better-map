@@ -42,6 +42,15 @@ export function saveCallsign(callsign: string, storage: Storage = window.localSt
   }
 }
 
+export function clearCallsign(storage: Storage = window.localStorage) {
+  try {
+    storage.removeItem(STORAGE_KEY)
+    return null
+  } catch {
+    return 'Callsign storage is unavailable. This session can continue without persistence.'
+  }
+}
+
 export function callsignStorageKey() {
   return STORAGE_KEY
 }

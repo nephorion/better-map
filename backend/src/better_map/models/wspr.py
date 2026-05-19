@@ -59,6 +59,7 @@ class WsprActivity(BaseModel):
 class ActivityLookupResult(BaseModel):
     callsign: str
     window_days: int = 10
+    window_hours: int = 24 * 10
     source: str = "wspr.live"
     count: int
     truncated: bool

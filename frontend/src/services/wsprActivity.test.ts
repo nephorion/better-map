@@ -5,6 +5,7 @@ import { fetchWsprActivity } from './wsprActivity'
 const successPayload = {
   callsign: 'VK2DJJ',
   window_days: 10,
+  window_hours: 240,
   source: 'wspr.live',
   count: 0,
   truncated: false,
@@ -22,7 +23,29 @@ afterEach(() => {
 test('fetches activity results', async () => {
   mockFetch(Response.json(successPayload))
 
-  await expect(fetchWsprActivity('VK2DJJ')).resolves.toEqual(successPayload)
+  await expect(fetchWsprActivity('VK2DJJ', { amount: 6, unit: 'hours' })).resolves.toEqual(successPayload)
+  expect(fetch).toHaveBeenCalledWith('/api/wspr/activity?callsign=VK2DJJ&window_hours=6')
+})
+
+test('passes result limit as query parameter', async () => {
+  mockFetch(Response.json(successPayload))
+
+  await expect(fetchWsprActivity('VK2DJJ', { amount: 6, unit: 'hours' }, 500)).resolves.toEqual(successPayload)
+  expect(fetch).toHaveBeenCalledWith('/api/wspr/activity?callsign=VK2DJJ&window_hours=6&limit=500')
+})
+
+test('fetches general activity results without a callsign query', async () => {
+  mockFetch(Response.json({ ...successPayload, callsign: '' }))
+
+  await expect(fetchWsprActivity(null)).resolves.toMatchObject({ callsign: '' })
+  expect(fetch).toHaveBeenCalledWith('/api/wspr/activity')
+})
+
+test('converts day request windows to hours', async () => {
+  mockFetch(Response.json(successPayload))
+
+  await expect(fetchWsprActivity(null, { amount: 2, unit: 'days' })).resolves.toEqual(successPayload)
+  expect(fetch).toHaveBeenCalledWith('/api/wspr/activity?window_hours=48')
 })
 
 test.each([
