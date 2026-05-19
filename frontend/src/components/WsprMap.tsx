@@ -171,6 +171,7 @@ export function WsprMap({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const deckOverlayRef = useRef<MapboxOverlay | null>(null)
+  const hoveredEndpointRef = useRef<PathEndpoint | null>(null)
   const [localConfig, setLocalConfig] = useState(() => defaultUserConfig(activeCallsign ?? ''))
   const [localConfigOpen, setLocalConfigOpen] = useState(false)
   const [mapReady, setMapReady] = useState(false)
@@ -263,9 +264,14 @@ export function WsprMap({
     const PULSE_DURATION_MS = 3000
     let animationId = 0
 
+    const HOVER_PULSE_SPEED = 6
+
     function renderLayers() {
-      const t = (Date.now() % PULSE_DURATION_MS) / PULSE_DURATION_MS
+      const now = Date.now()
+      const t = (now % PULSE_DURATION_MS) / PULSE_DURATION_MS
       const dots = pulseDots(segments, t, paths)
+      const hovered = hoveredEndpointRef.current
+      const hoverPulse = (now / 1000) * HOVER_PULSE_SPEED
 
       const graylineLayers = grayline
         ? [
@@ -323,14 +329,48 @@ export function WsprMap({
             getPosition: (endpoint) => endpoint.coordinates,
             getFillColor: [255, 255, 255, 0],
             getLineColor: (endpoint) => colorForActivityRole(endpoint.activityRole, endpoint.opacity),
-            getRadius: 4,
+            getRadius: 2,
             radiusUnits: 'pixels',
             stroked: true,
             filled: false,
             lineWidthMinPixels: 1,
+            pickable: false,
+          }),
+          ...(hovered
+            ? [
+              new ScatterplotLayer<PathEndpoint>({
+                id: 'wspr-deck-endpoint-hover',
+                data: [hovered],
+                getPosition: (endpoint) => endpoint.coordinates,
+                getFillColor: (endpoint) => colorForActivityRole(endpoint.activityRole, 0.25),
+                getLineColor: (endpoint) => colorForActivityRole(endpoint.activityRole, 1),
+                getRadius: 4 + 4 * Math.sin(hoverPulse),
+                radiusUnits: 'pixels',
+                stroked: true,
+                filled: true,
+                lineWidthMinPixels: 1,
+                pickable: false,
+              }),
+            ]
+            : []),
+          new ScatterplotLayer<PathEndpoint>({
+            id: 'wspr-deck-endpoint-hitarea',
+            data: endpoints,
+            getPosition: (endpoint) => endpoint.coordinates,
+            getFillColor: [0, 0, 0, 0],
+            getLineColor: [0, 0, 0, 0],
+            getRadius: 12,
+            radiusUnits: 'pixels',
+            stroked: false,
+            filled: true,
             pickable: true,
             onClick: (info) => {
               if (info.object) setSelectedPathId(info.object.pathId)
+            },
+            onHover: (info) => {
+              hoveredEndpointRef.current = (info.object as PathEndpoint) ?? null
+              const canvas = containerRef.current
+              if (canvas) canvas.style.cursor = info.object ? 'pointer' : ''
             },
           }),
         ],

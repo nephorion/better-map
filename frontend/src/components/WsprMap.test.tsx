@@ -328,6 +328,51 @@ test('renders animated pulse dots along WSPR paths', async () => {
   expect(pulseLayer.props.pickable).toBe(false)
 })
 
+test('shows pulsing hover highlight and pointer cursor on endpoint hover', async () => {
+  render(<WsprMap features={[feature]} />)
+  act(() => mocks.loadHandler?.())
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+
+  const hitLayer = latestDeckLayer('wspr-deck-endpoint-hitarea') as DeckLayer & {
+    props: {
+      data: Array<{ id: string; pathId: string; coordinates: [number, number]; activityRole: string; opacity: number }>
+      onHover: (info: { object: unknown }) => void
+    }
+  }
+
+  // Hover over an endpoint.
+  act(() => hitLayer.props.onHover({ object: hitLayer.props.data[0] }))
+
+  // Wait for the next animation frame to pick up the hover.
+  await waitFor(() => {
+    const hoverLayer = latestDeckLayer('wspr-deck-endpoint-hover')
+    expect(hoverLayer).toBeDefined()
+  })
+
+  const hoverLayer = latestDeckLayer('wspr-deck-endpoint-hover') as DeckLayer & {
+    props: {
+      data: unknown[]
+      getPosition: (endpoint: { coordinates: [number, number] }) => [number, number]
+      getFillColor: (endpoint: { activityRole: string }) => number[]
+      getLineColor: (endpoint: { activityRole: string }) => number[]
+      getRadius: number
+      pickable: boolean
+    }
+  }
+  expect(hoverLayer.props.data).toHaveLength(1)
+  expect(hoverLayer.props.getPosition({ coordinates: [151.2, -33.8] })).toEqual([151.2, -33.8])
+  expect(hoverLayer.props.getFillColor({ activityRole: 'transmitter' })).toBeTruthy()
+  expect(hoverLayer.props.getLineColor({ activityRole: 'transmitter' })).toBeTruthy()
+  expect(hoverLayer.props.getRadius).toBeGreaterThan(0)
+  expect(hoverLayer.props.pickable).toBe(false)
+
+  // Hover off.
+  act(() => hitLayer.props.onHover({ object: null }))
+  await waitFor(() => {
+    expect(latestDeckLayers().find((l) => l.props.id === 'wspr-deck-endpoint-hover')).toBeUndefined()
+  })
+})
+
 test('renders grayline overlay behind WSPR paths', async () => {
   render(<WsprMap features={[feature]} />)
   mocks.loadHandler?.()
@@ -340,6 +385,7 @@ test('renders grayline overlay behind WSPR paths', async () => {
     'wspr-deck-paths',
     'wspr-deck-pulse',
     'wspr-deck-endpoints',
+    'wspr-deck-endpoint-hitarea',
   ])
   const graylineLayer = latestDeckLayer('grayline-terminator-overlay') as DeckLayer & {
     props: {
@@ -385,11 +431,23 @@ test('renders circles at each WSPR path endpoint', async () => {
   expect(endpointLayer.props.getFillColor).toEqual([255, 255, 255, 0])
   expect(endpointLayer.props.getLineColor({ activityRole: 'transmitter', opacity: 1 })).toEqual([255, 154, 162, 230])
   expect(endpointLayer.props.getLineColor({ activityRole: 'receiver', opacity: 1 })).toEqual([170, 225, 170, 230])
-  expect(endpointLayer.props.getRadius).toBe(4)
+  expect(endpointLayer.props.getRadius).toBe(2)
   expect(endpointLayer.props.radiusUnits).toBe('pixels')
   expect(endpointLayer.props.stroked).toBe(true)
   expect(endpointLayer.props.filled).toBe(false)
-  expect(endpointLayer.props.pickable).toBe(true)
+  expect(endpointLayer.props.pickable).toBe(false)
+
+  const hitLayer = latestDeckLayer('wspr-deck-endpoint-hitarea') as DeckLayer & {
+    props: {
+      getRadius: number
+      pickable: boolean
+      getPosition: (endpoint: { coordinates: [number, number] }) => [number, number]
+      data: Array<{ coordinates: [number, number] }>
+    }
+  }
+  expect(hitLayer.props.getRadius).toBe(12)
+  expect(hitLayer.props.pickable).toBe(true)
+  expect(hitLayer.props.getPosition(hitLayer.props.data[0])).toEqual(hitLayer.props.data[0].coordinates)
 })
 
 test('fades old WSPR activity based on configured request window', async () => {
@@ -498,14 +556,14 @@ test('shows dismissible contact details when clicking a WSPR endpoint circle', a
   act(() => mocks.loadHandler?.())
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+  const hitLayer = latestDeckLayer('wspr-deck-endpoint-hitarea') as DeckLayer & {
     props: {
       data: Array<{ id: string; pathId: string; coordinates: [number, number]; station: string }>
       onClick: (info: { object: { id: string; pathId: string; coordinates: [number, number]; station: string } | null }) => void
     }
   }
 
-  act(() => endpointLayer.props.onClick({ object: endpointLayer.props.data[0] }))
+  act(() => hitLayer.props.onClick({ object: hitLayer.props.data[0] }))
 
   const details = screen.getByLabelText(/selected wspr activity details/i)
   expect(details).toHaveTextContent('VK2DJJ to VK3ABC')
@@ -525,14 +583,14 @@ test('uses fallback contact details when clicking incomplete WSPR data', async (
   act(() => mocks.loadHandler?.())
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+  const hitLayer = latestDeckLayer('wspr-deck-endpoint-hitarea') as DeckLayer & {
     props: {
       data: Array<{ id: string; pathId: string; coordinates: [number, number]; station: string }>
       onClick: (info: { object: { id: string; pathId: string; coordinates: [number, number]; station: string } | null }) => void
     }
   }
 
-  act(() => endpointLayer.props.onClick({ object: endpointLayer.props.data[1] }))
+  act(() => hitLayer.props.onClick({ object: hitLayer.props.data[1] }))
 
   const details = screen.getByLabelText(/selected wspr activity details/i)
   expect(details).toHaveTextContent('Unknown')
@@ -547,7 +605,7 @@ test('keeps the map usable when the initial grayline cannot be created', async (
   act(() => mocks.loadHandler?.())
 
   expect(screen.getByLabelText(/world map/i)).toBeInTheDocument()
-  expect(latestDeckLayers().map((layer) => layer.props.id)).toEqual(['wspr-deck-paths', 'wspr-deck-endpoints'])
+  expect(latestDeckLayers().map((layer) => layer.props.id)).toEqual(['wspr-deck-paths', 'wspr-deck-endpoints', 'wspr-deck-endpoint-hitarea'])
 })
 
 test('refreshes grayline every five visible minutes and preserves selected endpoint details', async () => {
@@ -560,13 +618,13 @@ test('refreshes grayline every five visible minutes and preserves selected endpo
   const initialGrayline = latestDeckLayer('grayline-terminator-line') as DeckLayer & {
     props: { data: Array<{ observationTime: string }> }
   }
-  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+  const hitLayer = latestDeckLayer('wspr-deck-endpoint-hitarea') as DeckLayer & {
     props: {
       data: Array<{ pathId: string }>
       onClick: (info: { object: { pathId: string } | null }) => void
     }
   }
-  act(() => endpointLayer.props.onClick({ object: endpointLayer.props.data[0] }))
+  act(() => hitLayer.props.onClick({ object: hitLayer.props.data[0] }))
   expect(screen.getByText(/VK2DJJ to VK3ABC/i)).toBeInTheDocument()
   mocks.setStyle.mockClear()
   mocks.fitBounds.mockClear()
