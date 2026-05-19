@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
+import { ArcLayer, PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import maplibregl, {
   type Map as MapLibreMap,
   type StyleSpecification,
@@ -30,10 +30,11 @@ type PathEndpoint = {
   opacity: number
 }
 
-type PathSegment = {
+type ArcSegment = {
   id: string
   pathId: string
-  coordinates: [[number, number], [number, number]]
+  sourcePosition: [number, number]
+  targetPosition: [number, number]
   activityRole: ActivityRole
   opacity: number
 }
@@ -99,10 +100,10 @@ function opacityForAge(time: string, requestWindow: RequestWindow) {
   return Math.max(MIN_AGE_OPACITY, Math.min(1, 1 - ageRatio))
 }
 
-function pathSegments(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow): PathSegment[] {
+function arcSegments(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow): ArcSegment[] {
   return paths.map((path) => {
     const opacity = opacityForAge(path.properties.time, requestWindow)
-    return { id: path.id, pathId: path.id, coordinates: path.coordinates, activityRole: path.properties.role, opacity }
+    return { id: path.id, pathId: path.id, sourcePosition: path.coordinates[0], targetPosition: path.coordinates[1], activityRole: path.properties.role, opacity }
   })
 }
 
@@ -174,7 +175,7 @@ export function WsprMap({
     [bandFilteredFeatures, effectiveConfig.activityVisibility],
   )
   const paths = useMemo(() => toMapPaths(filteredFeatures, activeCallsign), [activeCallsign, filteredFeatures])
-  const segments = useMemo(() => pathSegments(paths, effectiveConfig.requestWindow), [effectiveConfig.requestWindow, paths])
+  const segments = useMemo(() => arcSegments(paths, effectiveConfig.requestWindow), [effectiveConfig.requestWindow, paths])
   const endpoints = useMemo(() => pathEndpoints(paths, effectiveConfig.requestWindow, activeCallsign), [activeCallsign, effectiveConfig.requestWindow, paths])
   const selectedFeature = filteredFeatures.find((feature) => feature.id === selectedPathId) ?? null
   const baseLayer = findBaseMapLayer(baseLayerId)
@@ -265,14 +266,25 @@ export function WsprMap({
     deckOverlay.setProps({
       layers: [
         ...graylineLayers,
-        new PathLayer<PathSegment>({
-          id: 'wspr-deck-paths',
+        new ArcLayer<ArcSegment>({
+          id: 'wspr-deck-arcs',
           data: segments,
-          getPath: (segment) => segment.coordinates,
-          getColor: (segment) => colorForActivityRole(segment.activityRole, segment.opacity),
+          greatCircle: true,
+          numSegments: 50,
+          getSourcePosition: (segment) => segment.sourcePosition,
+          getTargetPosition: (segment) => segment.targetPosition,
+          getSourceColor: (segment) => colorForActivityRole(segment.activityRole, segment.opacity),
+          getTargetColor: (segment) => colorForActivityRole(segment.activityRole, segment.opacity),
           getWidth: 1.5,
           widthMinPixels: 1,
+          getHeight: 0.5,
+          getTilt: 0,
           pickable: false,
+          transitions: {
+            getSourcePosition: { duration: 800, type: 'spring', stiffness: 0.3, damping: 0.6 },
+            getTargetPosition: { duration: 800, type: 'spring', stiffness: 0.3, damping: 0.6 },
+            getWidth: { duration: 600 },
+          },
         }),
         new ScatterplotLayer<PathEndpoint>({
           id: 'wspr-deck-endpoints',

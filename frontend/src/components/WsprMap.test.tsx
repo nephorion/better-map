@@ -144,7 +144,7 @@ test('filters WSPR paths by configured bands', async () => {
   act(() => mocks.loadHandler?.())
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
   expect([...new Set(pathLayer.props.data.map((path) => path.pathId))]).toEqual(['1'])
 })
 
@@ -163,7 +163,7 @@ test('filters WSPR paths by configured spot and heard visibility', async () => {
   act(() => mocks.loadHandler?.())
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
   expect(pathLayer.props.data.map((path) => path.pathId)).toEqual(['heard'])
 })
 
@@ -182,7 +182,7 @@ test('does not filter paths when bands are Mixed', async () => {
   mocks.loadHandler?.()
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
   expect([...new Set(pathLayer.props.data.map((path) => path.pathId))]).toEqual(['1', '2'])
 })
 
@@ -245,7 +245,7 @@ test('keeps WSPR path lines non-interactive', async () => {
   mocks.loadHandler?.()
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
 
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & {
     props: { pickable: boolean; onClick?: unknown }
   }
 
@@ -281,25 +281,35 @@ test('switches base map style when active layer changes', async () => {
   await waitFor(() => expect(mocks.setStyle).toHaveBeenCalled())
 })
 
-test('uses deck.gl path accessors', async () => {
+test('uses deck.gl arc accessors', async () => {
   render(<WsprMap features={[feature]} />)
   mocks.loadHandler?.()
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
 
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+  const arcLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & {
     props: {
-      getPath: (path: { coordinates: unknown }) => unknown
-      getColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+      getSourcePosition: (arc: { sourcePosition: unknown }) => unknown
+      getTargetPosition: (arc: { targetPosition: unknown }) => unknown
+      getSourceColor: (arc: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+      getTargetColor: (arc: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
       getWidth: number
+      greatCircle: boolean
+      getHeight: number
+      transitions: unknown
     }
   }
-  const layerProps = pathLayer.props
+  const layerProps = arcLayer.props
 
-  expect(layerProps.getPath({ coordinates: feature.geometry.coordinates })).toEqual(feature.geometry.coordinates)
-  expect(layerProps.getColor({ activityRole: 'transmitter', opacity: 1 })).toEqual([255, 154, 162, 230])
-  expect(layerProps.getColor({ activityRole: 'receiver', opacity: 1 })).toEqual([170, 225, 170, 230])
-  expect(layerProps.getColor({ activityRole: 'both', opacity: 1 })).toEqual([255, 222, 122, 230])
+  expect(layerProps.getSourcePosition({ sourcePosition: feature.geometry.coordinates[0] })).toEqual(feature.geometry.coordinates[0])
+  expect(layerProps.getTargetPosition({ targetPosition: feature.geometry.coordinates[1] })).toEqual(feature.geometry.coordinates[1])
+  expect(layerProps.getSourceColor({ activityRole: 'transmitter', opacity: 1 })).toEqual([255, 154, 162, 230])
+  expect(layerProps.getSourceColor({ activityRole: 'receiver', opacity: 1 })).toEqual([170, 225, 170, 230])
+  expect(layerProps.getSourceColor({ activityRole: 'both', opacity: 1 })).toEqual([255, 222, 122, 230])
+  expect(layerProps.getTargetColor({ activityRole: 'transmitter', opacity: 1 })).toEqual([255, 154, 162, 230])
   expect(layerProps.getWidth).toBe(1.5)
+  expect(layerProps.greatCircle).toBe(true)
+  expect(layerProps.getHeight).toBe(0.5)
+  expect(layerProps.transitions).toEqual(expect.objectContaining({ getSourcePosition: expect.any(Object) }))
 })
 
 test('renders grayline overlay behind WSPR paths', async () => {
@@ -311,7 +321,7 @@ test('renders grayline overlay behind WSPR paths', async () => {
   expect(layers.map((layer) => layer.props.id)).toEqual([
     'grayline-terminator-overlay',
     'grayline-terminator-line',
-    'wspr-deck-paths',
+    'wspr-deck-arcs',
     'wspr-deck-endpoints',
   ])
   const graylineLayer = latestDeckLayer('grayline-terminator-overlay') as DeckLayer & {
@@ -372,10 +382,10 @@ test('fades old WSPR activity based on configured request window', async () => {
   act(() => mocks.loadHandler?.())
 
   expect(deckMocks.setProps).toHaveBeenCalled()
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & {
     props: {
       data: Array<{ activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }>
-      getColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+      getSourceColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
     }
   }
   const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
@@ -386,7 +396,7 @@ test('fades old WSPR activity based on configured request window', async () => {
   }
 
   expect(pathLayer.props.data[0].opacity).toBeCloseTo(0.08)
-  expect(pathLayer.props.getColor(pathLayer.props.data[0])).toEqual([255, 154, 162, 18])
+  expect(pathLayer.props.getSourceColor(pathLayer.props.data[0])).toEqual([255, 154, 162, 18])
   expect(endpointLayer.props.getLineColor(endpointLayer.props.data[0])).toEqual([255, 154, 162, 18])
 })
 
@@ -401,7 +411,7 @@ test('treats timezone-less WSPR timestamps as UTC when fading by age', async () 
   act(() => mocks.loadHandler?.())
 
   expect(deckMocks.setProps).toHaveBeenCalled()
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & {
     props: { data: Array<{ opacity: number }> }
   }
 
@@ -417,7 +427,7 @@ test('keeps activity prominent when its timestamp cannot be parsed', async () =>
   act(() => mocks.loadHandler?.())
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & {
     props: { data: Array<{ opacity: number }> }
   }
 
@@ -434,17 +444,17 @@ test('colors spotted activity red and heard activity green', async () => {
   act(() => mocks.loadHandler?.())
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & {
     props: {
       data: Array<{ id: string; activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }>
-      getColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+      getSourceColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
     }
   }
 
   expect(pathLayer.props.data.map((segment) => segment.id)).toEqual(['1', 'heard', 'both'])
-  expect(pathLayer.props.getColor({ ...pathLayer.props.data[0], opacity: 1 })).toEqual([255, 154, 162, 230])
-  expect(pathLayer.props.getColor({ ...pathLayer.props.data[1], opacity: 1 })).toEqual([170, 225, 170, 230])
-  expect(pathLayer.props.getColor({ ...pathLayer.props.data[2], opacity: 1 })).toEqual([255, 222, 122, 230])
+  expect(pathLayer.props.getSourceColor({ ...pathLayer.props.data[0], opacity: 1 })).toEqual([255, 154, 162, 230])
+  expect(pathLayer.props.getSourceColor({ ...pathLayer.props.data[1], opacity: 1 })).toEqual([170, 225, 170, 230])
+  expect(pathLayer.props.getSourceColor({ ...pathLayer.props.data[2], opacity: 1 })).toEqual([255, 222, 122, 230])
 })
 
 test('keeps endpoint stations oriented when the active callsign is the receiver', async () => {
@@ -452,7 +462,7 @@ test('keeps endpoint stations oriented when the active callsign is the receiver'
   act(() => mocks.loadHandler?.())
 
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+  const pathLayer = latestDeckLayer('wspr-deck-arcs') as DeckLayer & {
     props: { data: Array<{ id: string; activityRole: 'transmitter' | 'receiver' | 'both' }> }
   }
   const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
@@ -520,7 +530,7 @@ test('keeps the map usable when the initial grayline cannot be created', async (
   act(() => mocks.loadHandler?.())
 
   expect(screen.getByLabelText(/world map/i)).toBeInTheDocument()
-  expect(latestDeckLayers().map((layer) => layer.props.id)).toEqual(['wspr-deck-paths', 'wspr-deck-endpoints'])
+  expect(latestDeckLayers().map((layer) => layer.props.id)).toEqual(['wspr-deck-arcs', 'wspr-deck-endpoints'])
 })
 
 test('refreshes grayline every five visible minutes and preserves selected endpoint details', async () => {
