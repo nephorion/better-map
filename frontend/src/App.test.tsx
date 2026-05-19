@@ -17,24 +17,34 @@ beforeEach(() => {
   vi.unstubAllGlobals()
   window.localStorage.clear()
   clearStoredCallsign()
+  vi.mocked(fetchWsprActivity).mockResolvedValue({
+    callsign: '',
+    window_days: 10,
+    window_hours: 240,
+    source: 'wspr.live',
+    count: 0,
+    truncated: false,
+    features: [],
+  })
 })
 
 async function setCallsign(user: ReturnType<typeof userEvent.setup>, callsign = 'VK2DJJ') {
-  await user.type(screen.getByRole('textbox', { name: /^callsign$/i }), callsign)
-  await user.click(screen.getByRole('button', { name: /^set callsign$/i }))
+  await user.type(screen.getByRole('textbox', { name: /callsign/i }), callsign)
+  await user.click(screen.getByRole('button', { name: /^save configuration$/i }))
 }
 
 test('renders the app shell and map region', () => {
   render(<App />)
 
   expect(screen.getByLabelText(/wspr activity map/i)).toBeInTheDocument()
-  expect(screen.getByRole('dialog', { name: /choose callsign/i })).toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: /map configuration/i })).toBeInTheDocument()
 })
 
 test('loads empty search results without a success status panel', async () => {
   vi.mocked(fetchWsprActivity).mockResolvedValueOnce({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 0,
     truncated: false,
@@ -53,6 +63,7 @@ test('loads truncated successful results without a map notice panel', async () =
   vi.mocked(fetchWsprActivity).mockResolvedValueOnce({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 1000,
     truncated: true,
@@ -63,7 +74,7 @@ test('loads truncated successful results without a map notice panel', async () =
 
   await setCallsign(user)
 
-  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ')
+  expect(fetchWsprActivity).toHaveBeenLastCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
   expect(screen.queryByText(/showing only the most recent 1,000 records/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/showing the most recent 1,000 wspr paths/i)).not.toBeInTheDocument()
 })
@@ -72,6 +83,7 @@ test('loads non-truncated successful results without a success status panel', as
   vi.mocked(fetchWsprActivity).mockResolvedValueOnce({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 2,
     truncated: false,
@@ -82,12 +94,20 @@ test('loads non-truncated successful results without a success status panel', as
 
   await setCallsign(user)
 
-  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ')
+  expect(fetchWsprActivity).toHaveBeenLastCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
   expect(screen.queryByText(/showing 2 wspr paths/i)).not.toBeInTheDocument()
 })
 
 test('shows non-destructive error state', async () => {
-  vi.mocked(fetchWsprActivity).mockRejectedValueOnce(
+  vi.mocked(fetchWsprActivity).mockResolvedValueOnce({
+    callsign: '',
+    window_days: 10,
+    window_hours: 240,
+    source: 'wspr.live',
+    count: 0,
+    truncated: false,
+    features: [],
+  }).mockRejectedValueOnce(
     new ApiClientError('provider_timeout', 504, 'WSPR lookup timed out. Try again.'),
   )
   const user = userEvent.setup()
@@ -99,7 +119,15 @@ test('shows non-destructive error state', async () => {
 })
 
 test('shows fallback message for unknown errors', async () => {
-  vi.mocked(fetchWsprActivity).mockRejectedValueOnce(new Error('boom'))
+  vi.mocked(fetchWsprActivity).mockResolvedValueOnce({
+    callsign: '',
+    window_days: 10,
+    window_hours: 240,
+    source: 'wspr.live',
+    count: 0,
+    truncated: false,
+    features: [],
+  }).mockRejectedValueOnce(new Error('boom'))
   const user = userEvent.setup()
   render(<App />)
 
@@ -114,6 +142,7 @@ test('loads immediately for returning users with a saved callsign', async () => 
   vi.mocked(fetchWsprActivity).mockResolvedValueOnce({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 0,
     truncated: false,
@@ -123,36 +152,36 @@ test('loads immediately for returning users with a saved callsign', async () => 
   render(<App />)
   await vi.runOnlyPendingTimersAsync()
 
-  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ')
-  expect(screen.queryByRole('dialog', { name: /choose callsign/i })).not.toBeInTheDocument()
+  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
+  expect(screen.queryByRole('dialog', { name: /map configuration/i })).not.toBeInTheDocument()
   vi.useRealTimers()
 })
 
-test('recovers from invalid saved callsign and allows prompt dismissal', async () => {
+test('recovers from invalid saved callsign and allows configuration dismissal', async () => {
   const user = userEvent.setup()
   seedStoredCallsign('?')
   render(<App />)
 
   expect(screen.getByText(/saved callsign was invalid/i)).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /dismiss/i }))
-  await user.click(screen.getByRole('button', { name: /^set callsign$/i }))
-  expect(screen.getByRole('dialog', { name: /choose callsign/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open map configuration/i }))
+  expect(screen.getByRole('dialog', { name: /map configuration/i })).toBeInTheDocument()
 })
 
-test('keeps invalid app prompt submissions in selection state', async () => {
+test('keeps invalid app configuration submissions in selection state', async () => {
   const user = userEvent.setup()
   render(<App />)
 
-  await user.type(screen.getByRole('textbox', { name: /^callsign$/i }), '?')
-  await user.click(screen.getByRole('button', { name: /^set callsign$/i }))
+  await user.type(screen.getByRole('textbox', { name: /callsign/i }), '?')
 
   expect(screen.getByText(/enter a valid callsign/i)).toBeInTheDocument()
 })
 
-test('changes base map, reopens callsign prompt, and refreshes manually', async () => {
+test('changes base map, reopens configuration panel, and refreshes manually', async () => {
   vi.mocked(fetchWsprActivity).mockResolvedValue({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 0,
     truncated: false,
@@ -166,12 +195,12 @@ test('changes base map, reopens callsign prompt, and refreshes manually', async 
   await user.click(screen.getByRole('button', { name: /openstreetmap humanitarian/i }))
   expect(window.localStorage.getItem('better-map.baseMapLayer')).toBe('osm-humanitarian')
   await user.click(screen.getByRole('button', { name: /active callsign/i }))
-  expect(screen.getByRole('dialog', { name: /choose callsign/i })).toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: /map configuration/i })).toBeInTheDocument()
   vi.useFakeTimers()
   fireEvent.click(screen.getByRole('button', { name: /refresh wspr activity/i }))
-  expect(fetchWsprActivity).toHaveBeenCalledTimes(1)
+  expect(fetchWsprActivity).toHaveBeenCalled()
   await vi.advanceTimersByTimeAsync(3000)
-  expect(fetchWsprActivity).toHaveBeenCalledTimes(2)
+  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
   vi.useRealTimers()
 })
 
@@ -182,6 +211,16 @@ test('starts with the saved base map layer', () => {
 
   expect(screen.queryByLabelText(/map attribution/i)).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /choose base map/i })).toBeInTheDocument()
+})
+
+test('opens configuration from the map cog after dismissal', async () => {
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /dismiss/i }))
+  await user.click(screen.getByRole('button', { name: /open map configuration/i }))
+
+  expect(screen.getByRole('dialog', { name: /map configuration/i })).toBeInTheDocument()
 })
 
 test('shows version mismatch status when metadata differs', async () => {
@@ -195,6 +234,7 @@ test('opens and dismisses Ko-fi pane without changing callsign or base map state
   vi.mocked(fetchWsprActivity).mockResolvedValue({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 0,
     truncated: false,
@@ -243,13 +283,13 @@ test('renders AGPL source link with safe external navigation', () => {
   render(<App />)
 
   const link = screen.getByRole('link', { name: /source code/i })
-  expect(link).toHaveTextContent('Source')
+  expect(link).toHaveTextContent('dev')
   expect(link).toHaveAttribute('href', 'https://github.com/nephorion/better-map')
   expect(link).toHaveAttribute('target', '_blank')
   expect(link).toHaveAttribute('rel', 'noreferrer')
   expect(screen.getByRole('link', { name: /visit nephorion main site/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /donate/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/frontend version hash/i)).toBeInTheDocument()
+  expect(link).toHaveAccessibleName(/frontend version hash/i)
 })
 
 test('warns when callsign cannot be persisted and blocks duplicate refreshes', async () => {
@@ -266,11 +306,12 @@ test('warns when callsign cannot be persisted and blocks duplicate refreshes', a
   render(<App />)
 
   await setCallsign(user)
-  expect(fetchWsprActivity).toHaveBeenCalledTimes(1)
+  expect(fetchWsprActivity).toHaveBeenCalledWith('VK2DJJ', { amount: 10, unit: 'days' })
 
   resolveLookup({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 0,
     truncated: false,
@@ -284,6 +325,7 @@ test('automatically refreshes when countdown reaches zero', async () => {
   vi.mocked(fetchWsprActivity).mockResolvedValue({
     callsign: 'VK2DJJ',
     window_days: 10,
+    window_hours: 240,
     source: 'wspr.live',
     count: 0,
     truncated: false,

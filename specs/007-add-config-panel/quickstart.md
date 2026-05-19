@@ -6,9 +6,9 @@
 2. Open the map with no stored callsign.
 3. Verify the configuration panel appears instead of the old callsign prompt.
 4. Close the panel and verify the bottom-left cog button can reopen it.
-5. Enter a valid 4-digit MGRS value and save.
-6. Reopen the panel, enter a valid 6-digit MGRS value, and save.
-7. Reopen the panel, enter an invalid MGRS value, and verify saving is blocked with a clear error.
+5. Enter a valid 4-character Maidenhead grid value and save.
+6. Reopen the panel, enter a valid 6-character Maidenhead grid value, and save.
+7. Reopen the panel, enter an invalid Maidenhead grid value, and verify saving is blocked with a clear error.
 8. Select one band and verify visible WSPR paths are limited to that band.
 9. Select multiple bands and verify visible WSPR paths include any selected band and exclude others.
 10. Select Mixed for bands and verify all WSPR paths are visible again.

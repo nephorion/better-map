@@ -12,10 +12,10 @@
 
 ### Session 2026-05-18
 
-- Q: Is MGRS location required to save configuration? → A: MGRS location is optional; empty is allowed.
+- Q: Is Maidenhead grid location required to save configuration? → A: Maidenhead grid location is optional; empty is allowed.
 - Q: Should the configuration panel include callsign entry? → A: Configuration panel includes optional callsign field.
 - Q: How long should configuration persist? → A: Persist configuration across browser sessions on this device.
-- Q: Can MGRS location be sent outside the browser for this feature? → A: Backend or WSPRnet requests may include MGRS when useful.
+- Q: Can Maidenhead grid location be sent outside the browser for this feature? → A: Backend or WSPRnet requests may include Maidenhead grid when useful.
 - Q: What should the map show when no callsign is configured? → A: Fetch general WSPR results without a callsign.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -45,14 +45,14 @@ A user can optionally specify their operating location using a Military Grid Ref
 
 **Why this priority**: The user's location is core configuration data and must be captured in a radio-operator-friendly format before other personalized views can be reliable.
 
-**Independent Test**: Can be fully tested by saving an empty location, entering valid 4-digit and 6-digit MGRS locations, saving each value, and confirming invalid or incomplete MGRS values are rejected with clear guidance.
+**Independent Test**: Can be fully tested by saving an empty location, entering valid 4-character and 6-character Maidenhead grid locations, saving each value, and confirming invalid or incomplete Maidenhead values are rejected with clear guidance.
 
 **Acceptance Scenarios**:
 
-1. **Given** the configuration window is open, **When** the user enters a valid 4-digit MGRS location and saves, **Then** the location is accepted.
-2. **Given** the configuration window is open, **When** the user enters a valid 6-digit MGRS location and saves, **Then** the location is accepted.
-3. **Given** the configuration window is open, **When** the user leaves MGRS location empty and saves, **Then** the configuration is accepted without an operating location.
-4. **Given** the configuration window is open, **When** the user enters an invalid MGRS location, **Then** the user is told the expected format and the invalid location is not saved.
+1. **Given** the configuration window is open, **When** the user enters a valid 4-character Maidenhead grid location and saves, **Then** the location is accepted.
+2. **Given** the configuration window is open, **When** the user enters a valid 6-character Maidenhead grid location and saves, **Then** the location is accepted.
+3. **Given** the configuration window is open, **When** the user leaves Maidenhead grid location empty and saves, **Then** the configuration is accepted without an operating location.
+4. **Given** the configuration window is open, **When** the user enters an invalid Maidenhead grid location, **Then** the user is told the expected format and the invalid location is not saved.
 
 ---
 
@@ -103,8 +103,8 @@ A user can select one or more standard amateur radio modes in configuration and 
 - **FR-002**: The system MUST open a configuration window when the user activates the cog-style configuration control.
 - **FR-003**: The system MUST show the configuration window instead of the previous callsign selection prompt whenever the user has not yet selected a callsign.
 - **FR-003a**: The configuration window MUST include an optional callsign field that accepts the same valid callsign format as the existing callsign selection flow and allows an empty value.
-- **FR-004**: The configuration window MUST allow the user to save with an empty operating location or enter an operating location in MGRS format with either 4-digit or 6-digit numeric precision after the grid zone and 100 km square identifiers.
-- **FR-005**: The system MUST reject non-empty invalid MGRS location values and explain the expected 4-digit or 6-digit MGRS format before saving.
+- **FR-004**: The configuration window MUST allow the user to save with an empty operating location or enter an operating location in Maidenhead grid locator format with either 4-character or 6-character precision.
+- **FR-005**: The system MUST reject non-empty invalid Maidenhead grid location values and explain the expected 4-character or 6-character Maidenhead format before saving.
 - **FR-006**: The configuration window MUST allow the user to select zero, one, or multiple standard amateur radio bands.
 - **FR-007**: The band selector MUST include Mixed as an option that means no band filter is applied.
 - **FR-008**: The band selector MUST include common standard amateur bands spanning LF, MF, HF, VHF, UHF, and microwave amateur allocations, including 2200 m, 630 m, 160 m, 80 m, 60 m, 40 m, 30 m, 20 m, 17 m, 15 m, 12 m, 10 m, 6 m, 2 m, 1.25 m, 70 cm, 33 cm, 23 cm, 13 cm, 9 cm, 5 cm, 3 cm, and above 10.5 GHz.
@@ -117,13 +117,13 @@ A user can select one or more standard amateur radio modes in configuration and 
 - **FR-015**: The system MUST NOT filter current WSPRnet results by selected modes, because WSPRnet results are treated as WSPR mode for this feature.
 - **FR-016**: The system MUST make active band filtering visible to the user through the selected configuration values or result-state messaging.
 - **FR-017**: The user MUST be able to reopen the configuration window and change saved settings at any time from the map interface.
-- **FR-018**: The system MAY include the saved MGRS location in backend or WSPRnet-related requests when doing so supports this feature's map or filtering behavior.
+- **FR-018**: The system MAY include the saved Maidenhead grid location in backend or WSPRnet-related requests when doing so supports this feature's map or filtering behavior.
 - **FR-019**: The system MUST fetch and display general WSPRnet results when no callsign is configured.
 
 ### Key Entities *(include if feature involves data)*
 
 - **User Configuration**: The user's saved map preferences persisted on the same device, including optional callsign, operating location, selected bands, selected modes, and whether Mixed is selected for band or mode filtering.
-- **Operating Location**: An optional user-provided MGRS value accepted at 4-digit or 6-digit precision for approximate position-aware map behavior.
+- **Operating Location**: An optional user-provided Maidenhead grid locator accepted at 4-character or 6-character precision for approximate position-aware map behavior.
 - **Band Preference**: A set of selected standard amateur radio bands, or Mixed to indicate all bands.
 - **Mode Preference**: A set of selected standard amateur radio modes, or Mixed to indicate all modes.
 - **WSPRnet Result**: A received result item with radio metadata, including a band that can be compared with the user's selected band preferences.
@@ -133,13 +133,13 @@ A user can select one or more standard amateur radio modes in configuration and 
 ### Measurable Outcomes
 
 - **SC-001**: 95% of users can open the configuration window from the map and save valid settings in under 60 seconds during usability testing.
-- **SC-002**: 100% of invalid non-empty MGRS entries tested with malformed, incomplete, or wrong-precision values are rejected before saving with a user-readable explanation, while empty MGRS location is accepted.
+- **SC-002**: 100% of invalid non-empty Maidenhead entries tested with malformed, incomplete, or wrong-precision values are rejected before saving with a user-readable explanation, while empty Maidenhead grid location is accepted.
 - **SC-003**: WSPRnet result lists contain only selected bands in 100% of tests where one or more specific bands are selected.
 - **SC-004**: WSPRnet result lists remain unfiltered by band in 100% of tests where Mixed is selected for bands.
 - **SC-005**: WSPRnet result lists remain unaffected by non-WSPR mode selections in 100% of current WSPRnet filtering tests.
 - **SC-006**: The bottom-left configuration control and save/close actions are usable without horizontal scrolling on common desktop and mobile viewport sizes.
 - **SC-007**: 100% of saved configuration values are restored after a page refresh and in a later browser session on the same device when browser storage is available.
-- **SC-008**: If saved MGRS location is included in backend or WSPRnet-related requests, 100% of such requests use the normalized saved MGRS value and omit it when no location is saved.
+- **SC-008**: If saved Maidenhead grid location is included in backend or WSPRnet-related requests, 100% of such requests use the normalized saved Maidenhead value and omit it when no location is saved.
 - **SC-009**: 100% of no-callsign result-loading tests display general WSPRnet results without requiring the user to enter a callsign first.
 
 ## Assumptions
@@ -148,4 +148,4 @@ A user can select one or more standard amateur radio modes in configuration and 
 - A missing callsign means the configuration window should replace the old callsign-only prompt and the map should use general WSPRnet results until a callsign is configured.
 - Band and mode lists should be broad enough for amateur radio use, using commonly referenced amateur allocations and mode categories rather than being limited to WSPR-only choices.
 - Mode selections are captured now for future logbook filtering, while current WSPRnet filtering applies only to bands.
-- MGRS 4-digit and 6-digit precision means two or three digits each for easting and northing after the MGRS grid zone and 100 km square identifiers.
+- Maidenhead grid locator precision for this feature means either field and square only, such as QF56, or field, square, and subsquare, such as QF56OD.

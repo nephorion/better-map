@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { WsprMap } from './WsprMap'
 import type { ActivityFeature } from '../services/wsprActivity'
 import * as terminatorService from '../services/terminator'
+import { defaultUserConfig, type UserConfig } from '../services/userConfig'
 
 type MapLibreMocks = {
   addLayer: ReturnType<typeof vi.fn>
@@ -52,6 +53,22 @@ const feature: ActivityFeature = {
   },
 }
 
+const fortyMeterFeature: ActivityFeature = {
+  ...feature,
+  id: '2',
+  properties: { ...feature.properties, band: '40m', tx_sign: 'VK4AAA' },
+}
+
+const heardFeature: ActivityFeature = {
+  ...feature,
+  id: 'heard',
+  properties: { ...feature.properties, role: 'receiver', tx_sign: 'VK4AAA' },
+}
+
+function configWithBands(values: UserConfig['bandSelection']['values']): UserConfig {
+  return { ...defaultUserConfig(), bandSelection: { kind: 'specific', values } }
+}
+
 beforeEach(() => {
   vi.useRealTimers()
   vi.restoreAllMocks()
@@ -88,6 +105,85 @@ test('shows an empty map state on a real world map container', () => {
   expect(screen.queryByLabelText(/keyboard selectable wspr paths/i)).not.toBeInTheDocument()
   unmount()
   expect(mocks.remove).toHaveBeenCalled()
+})
+
+test('opens configuration panel from the map cog and saves settings', async () => {
+  const onSaveConfig = vi.fn()
+  render(<WsprMap features={[]} userConfig={defaultUserConfig()} onSaveConfig={onSaveConfig} />)
+
+  fireEvent.click(screen.getByRole('button', { name: /open map configuration/i }))
+  expect(screen.getByRole('dialog', { name: /map configuration/i })).toBeInTheDocument()
+  fireEvent.change(screen.getByRole('textbox', { name: /callsign/i }), { target: { value: 'vk2djj' } })
+  fireEvent.click(screen.getByRole('button', { name: /save configuration/i }))
+
+  expect(onSaveConfig).toHaveBeenCalledWith(expect.objectContaining({ callsign: 'VK2DJJ' }))
+})
+
+test('closes local configuration panel when no external handlers are provided', () => {
+  render(<WsprMap features={[]} />)
+
+  fireEvent.click(screen.getByRole('button', { name: /open map configuration/i }))
+  expect(screen.getByRole('dialog', { name: /map configuration/i })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /dismiss/i }))
+
+  expect(screen.queryByRole('dialog', { name: /map configuration/i })).not.toBeInTheDocument()
+})
+
+test('saves and closes local configuration panel when uncontrolled', () => {
+  render(<WsprMap features={[]} />)
+
+  fireEvent.click(screen.getByRole('button', { name: /open map configuration/i }))
+  fireEvent.change(screen.getByRole('textbox', { name: /callsign/i }), { target: { value: 'vk2djj' } })
+  fireEvent.click(screen.getByRole('button', { name: /save configuration/i }))
+
+  expect(screen.queryByRole('dialog', { name: /map configuration/i })).not.toBeInTheDocument()
+})
+
+test('filters WSPR paths by configured bands', async () => {
+  render(<WsprMap features={[feature, fortyMeterFeature]} userConfig={configWithBands(['20m'])} />)
+  act(() => mocks.loadHandler?.())
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
+  expect([...new Set(pathLayer.props.data.map((path) => path.pathId))]).toEqual(['1'])
+})
+
+test('shows an active-band empty state for unknown bands', async () => {
+  render(<WsprMap features={[fortyMeterFeature]} userConfig={configWithBands(['20m'])} />)
+  mocks.loadHandler?.()
+
+  expect(await screen.findByText(/no wspr paths match the active filters/i)).toBeInTheDocument()
+})
+
+test('filters WSPR paths by configured spot and heard visibility', async () => {
+  render(<WsprMap features={[feature, heardFeature]} userConfig={{
+    ...defaultUserConfig(),
+    activityVisibility: { showSpots: false, showHeard: true },
+  }} />)
+  act(() => mocks.loadHandler?.())
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
+  expect(pathLayer.props.data.map((path) => path.pathId)).toEqual(['heard'])
+})
+
+test('shows an active-filter empty state when activity visibility hides all paths', async () => {
+  render(<WsprMap features={[feature]} userConfig={{
+    ...defaultUserConfig(),
+    activityVisibility: { showSpots: false, showHeard: true },
+  }} />)
+  mocks.loadHandler?.()
+
+  expect(await screen.findByText(/no wspr paths match the active filters/i)).toBeInTheDocument()
+})
+
+test('does not filter paths when bands are Mixed', async () => {
+  render(<WsprMap features={[feature, fortyMeterFeature]} userConfig={defaultUserConfig()} />)
+  mocks.loadHandler?.()
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & { props: { data: Array<{ pathId: string }> } }
+  expect([...new Set(pathLayer.props.data.map((path) => path.pathId))]).toEqual(['1', '2'])
 })
 
 test('keeps map attribution collapsed by default', () => {
@@ -144,17 +240,18 @@ test('adds WSPR paths as a deck.gl path layer without changing map view', async 
   expect(screen.queryByText(/most recent 1,000/i)).not.toBeInTheDocument()
 })
 
-test('does not refit bounds when selection changes', async () => {
+test('keeps WSPR path lines non-interactive', async () => {
   render(<WsprMap features={[feature]} />)
   mocks.loadHandler?.()
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
 
   const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
-    props: { onClick: (info: { object: unknown }) => void }
+    props: { pickable: boolean; onClick?: unknown }
   }
-  pathLayer.props.onClick({ object: { id: '1' } })
 
-  await screen.findByText(/VK2DJJ to VK3ABC/i)
+  expect(pathLayer.props.pickable).toBe(false)
+  expect(pathLayer.props.onClick).toBeUndefined()
+  expect(screen.queryByLabelText(/selected wspr activity details/i)).not.toBeInTheDocument()
   expect(mocks.fitBounds).not.toHaveBeenCalled()
 })
 
@@ -184,20 +281,7 @@ test('switches base map style when active layer changes', async () => {
   await waitFor(() => expect(mocks.setStyle).toHaveBeenCalled())
 })
 
-test('selects a path from deck.gl pointer interaction', async () => {
-  render(<WsprMap features={[feature]} />)
-  mocks.loadHandler?.()
-  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
-
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
-    props: { onClick: (info: { object: unknown }) => void }
-  }
-  pathLayer.props.onClick({ object: { id: '1' } })
-
-  expect(await screen.findByText(/VK2DJJ to VK3ABC/i)).toBeInTheDocument()
-})
-
-test('uses deck.gl accessors and ignores empty pointer hits', async () => {
+test('uses deck.gl path accessors', async () => {
   render(<WsprMap features={[feature]} />)
   mocks.loadHandler?.()
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
@@ -205,27 +289,17 @@ test('uses deck.gl accessors and ignores empty pointer hits', async () => {
   const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
     props: {
       getPath: (path: { coordinates: unknown }) => unknown
-      getColor: (path: { id: string }) => number[]
-      getWidth: (path: { id: string }) => number
-      onClick: (info: { object: { id: string } | null }) => void
+      getColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+      getWidth: number
     }
   }
   const layerProps = pathLayer.props
 
   expect(layerProps.getPath({ coordinates: feature.geometry.coordinates })).toEqual(feature.geometry.coordinates)
-  expect(layerProps.getColor({ id: 'missing' })).toEqual([104, 211, 255, 220])
-  expect(layerProps.getWidth({ id: 'missing' })).toBe(3)
-  act(() => {
-    layerProps.onClick({ object: null })
-    layerProps.onClick({ object: { id: '1' } })
-  })
-
-  await screen.findByText(/VK2DJJ to VK3ABC/i)
-  const selectedPathLayer = latestDeckLayer('wspr-deck-paths') as typeof pathLayer
-  expect(selectedPathLayer.props.getColor({ id: '1' })).toEqual([255, 222, 122, 245])
-  expect(selectedPathLayer.props.getWidth({ id: '1' })).toBe(5)
-  fireEvent.click(screen.getByRole('button', { name: /close/i }))
-  expect(screen.queryByLabelText(/selected wspr activity details/i)).not.toBeInTheDocument()
+  expect(layerProps.getColor({ activityRole: 'transmitter', opacity: 1 })).toEqual([255, 154, 162, 230])
+  expect(layerProps.getColor({ activityRole: 'receiver', opacity: 1 })).toEqual([170, 225, 170, 230])
+  expect(layerProps.getColor({ activityRole: 'both', opacity: 1 })).toEqual([255, 222, 122, 230])
+  expect(layerProps.getWidth).toBe(1.5)
 })
 
 test('renders grayline overlay behind WSPR paths', async () => {
@@ -238,6 +312,7 @@ test('renders grayline overlay behind WSPR paths', async () => {
     'grayline-terminator-overlay',
     'grayline-terminator-line',
     'wspr-deck-paths',
+    'wspr-deck-endpoints',
   ])
   const graylineLayer = latestDeckLayer('grayline-terminator-overlay') as DeckLayer & {
     props: {
@@ -256,6 +331,187 @@ test('renders grayline overlay behind WSPR paths', async () => {
   expect(graylineLayer.props.pickable).toBe(false)
 })
 
+test('renders circles at each WSPR path endpoint', async () => {
+  render(<WsprMap features={[feature]} />)
+  mocks.loadHandler?.()
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+    props: {
+      data: Array<{ id: string; pathId: string; coordinates: [number, number] }>
+      getPosition: (endpoint: { coordinates: [number, number] }) => [number, number]
+      getFillColor: number[]
+      getLineColor: (endpoint: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+      getRadius: number
+      radiusUnits: string
+      stroked: boolean
+      filled: boolean
+      pickable: boolean
+    }
+  }
+
+  expect(endpointLayer.props.data).toEqual([
+    { id: '1-start', pathId: '1', coordinates: [151.2, -33.8], endpoint: 'start', station: 'VK2DJJ', stationRole: 'tx', activityRole: 'transmitter', opacity: expect.any(Number) },
+    { id: '1-end', pathId: '1', coordinates: [144.9, -37.8], endpoint: 'end', station: 'VK3ABC', stationRole: 'rx', activityRole: 'transmitter', opacity: expect.any(Number) },
+  ])
+  expect(endpointLayer.props.getPosition(endpointLayer.props.data[0])).toEqual([151.2, -33.8])
+  expect(endpointLayer.props.getFillColor).toEqual([255, 255, 255, 0])
+  expect(endpointLayer.props.getLineColor({ activityRole: 'transmitter', opacity: 1 })).toEqual([255, 154, 162, 230])
+  expect(endpointLayer.props.getLineColor({ activityRole: 'receiver', opacity: 1 })).toEqual([170, 225, 170, 230])
+  expect(endpointLayer.props.getRadius).toBe(4)
+  expect(endpointLayer.props.radiusUnits).toBe('pixels')
+  expect(endpointLayer.props.stroked).toBe(true)
+  expect(endpointLayer.props.filled).toBe(false)
+  expect(endpointLayer.props.pickable).toBe(true)
+})
+
+test('fades old WSPR activity based on configured request window', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-05-16T12:30:00Z'))
+  render(<WsprMap features={[feature]} userConfig={{ ...defaultUserConfig(), requestWindow: { amount: 2, unit: 'hours' } }} />)
+  act(() => mocks.loadHandler?.())
+
+  expect(deckMocks.setProps).toHaveBeenCalled()
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+    props: {
+      data: Array<{ activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }>
+      getColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+    }
+  }
+  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+    props: {
+      data: Array<{ activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }>
+      getLineColor: (endpoint: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+    }
+  }
+
+  expect(pathLayer.props.data[0].opacity).toBeCloseTo(0.08)
+  expect(pathLayer.props.getColor(pathLayer.props.data[0])).toEqual([255, 154, 162, 18])
+  expect(endpointLayer.props.getLineColor(endpointLayer.props.data[0])).toEqual([255, 154, 162, 18])
+})
+
+test('treats timezone-less WSPR timestamps as UTC when fading by age', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-05-16T11:30:00Z'))
+  const utcFeature: ActivityFeature = {
+    ...feature,
+    properties: { ...feature.properties, time: '2026-05-16T10:30:00' },
+  }
+  render(<WsprMap features={[utcFeature]} userConfig={{ ...defaultUserConfig(), requestWindow: { amount: 2, unit: 'hours' } }} />)
+  act(() => mocks.loadHandler?.())
+
+  expect(deckMocks.setProps).toHaveBeenCalled()
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+    props: { data: Array<{ opacity: number }> }
+  }
+
+  expect(pathLayer.props.data[0].opacity).toBeCloseTo(0.5)
+})
+
+test('keeps activity prominent when its timestamp cannot be parsed', async () => {
+  const invalidTimeFeature: ActivityFeature = {
+    ...feature,
+    properties: { ...feature.properties, time: 'not-a-date' },
+  }
+  render(<WsprMap features={[invalidTimeFeature]} userConfig={{ ...defaultUserConfig(), requestWindow: { amount: 1, unit: 'hours' } }} />)
+  act(() => mocks.loadHandler?.())
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+    props: { data: Array<{ opacity: number }> }
+  }
+
+  expect(pathLayer.props.data[0].opacity).toBe(1)
+})
+
+test('colors spotted activity red and heard activity green', async () => {
+  const bothFeature: ActivityFeature = {
+    ...feature,
+    id: 'both',
+    properties: { ...feature.properties, role: 'both' },
+  }
+  render(<WsprMap features={[feature, heardFeature, bothFeature]} />)
+  act(() => mocks.loadHandler?.())
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+    props: {
+      data: Array<{ id: string; activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }>
+      getColor: (path: { activityRole: 'transmitter' | 'receiver' | 'both'; opacity: number }) => number[]
+    }
+  }
+
+  expect(pathLayer.props.data.map((segment) => segment.id)).toEqual(['1', 'heard', 'both'])
+  expect(pathLayer.props.getColor({ ...pathLayer.props.data[0], opacity: 1 })).toEqual([255, 154, 162, 230])
+  expect(pathLayer.props.getColor({ ...pathLayer.props.data[1], opacity: 1 })).toEqual([170, 225, 170, 230])
+  expect(pathLayer.props.getColor({ ...pathLayer.props.data[2], opacity: 1 })).toEqual([255, 222, 122, 230])
+})
+
+test('keeps endpoint stations oriented when the active callsign is the receiver', async () => {
+  render(<WsprMap features={[feature]} activeCallsign="VK3ABC" />)
+  act(() => mocks.loadHandler?.())
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
+    props: { data: Array<{ id: string; activityRole: 'transmitter' | 'receiver' | 'both' }> }
+  }
+  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+    props: { data: Array<{ station: string; stationRole: 'tx' | 'rx' }> }
+  }
+
+  expect(pathLayer.props.data).toEqual([expect.objectContaining({ id: '1', activityRole: 'transmitter' })])
+  expect(endpointLayer.props.data).toEqual([
+    expect.objectContaining({ station: 'VK3ABC', stationRole: 'rx' }),
+    expect.objectContaining({ station: 'VK2DJJ', stationRole: 'tx' }),
+  ])
+})
+
+test('shows dismissible contact details when clicking a WSPR endpoint circle', async () => {
+  render(<WsprMap features={[feature]} />)
+  act(() => mocks.loadHandler?.())
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+    props: {
+      data: Array<{ id: string; pathId: string; coordinates: [number, number]; station: string }>
+      onClick: (info: { object: { id: string; pathId: string; coordinates: [number, number]; station: string } | null }) => void
+    }
+  }
+
+  act(() => endpointLayer.props.onClick({ object: endpointLayer.props.data[0] }))
+
+  const details = screen.getByLabelText(/selected wspr activity details/i)
+  expect(details).toHaveTextContent('VK2DJJ to VK3ABC')
+  expect(details).toHaveTextContent('20m')
+  expect(details).toHaveTextContent('-18 dB')
+  fireEvent.click(screen.getByRole('button', { name: /close/i }))
+
+  expect(screen.queryByLabelText(/selected wspr activity details/i)).not.toBeInTheDocument()
+})
+
+test('uses fallback contact details when clicking incomplete WSPR data', async () => {
+  const incompleteFeature: ActivityFeature = {
+    ...feature,
+    properties: { ...feature.properties, band: null, snr_db: null },
+  }
+  render(<WsprMap features={[incompleteFeature]} />)
+  act(() => mocks.loadHandler?.())
+
+  await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
+  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+    props: {
+      data: Array<{ id: string; pathId: string; coordinates: [number, number]; station: string }>
+      onClick: (info: { object: { id: string; pathId: string; coordinates: [number, number]; station: string } | null }) => void
+    }
+  }
+
+  act(() => endpointLayer.props.onClick({ object: endpointLayer.props.data[1] }))
+
+  const details = screen.getByLabelText(/selected wspr activity details/i)
+  expect(details).toHaveTextContent('Unknown')
+  expect(details).toHaveTextContent('Unknown dB')
+})
+
 test('keeps the map usable when the initial grayline cannot be created', async () => {
   vi.spyOn(terminatorService, 'createGraylineTerminator').mockImplementationOnce(() => {
     throw new Error('blocked')
@@ -264,10 +520,10 @@ test('keeps the map usable when the initial grayline cannot be created', async (
   act(() => mocks.loadHandler?.())
 
   expect(screen.getByLabelText(/world map/i)).toBeInTheDocument()
-  expect(latestDeckLayers().map((layer) => layer.props.id)).toEqual(['wspr-deck-paths'])
+  expect(latestDeckLayers().map((layer) => layer.props.id)).toEqual(['wspr-deck-paths', 'wspr-deck-endpoints'])
 })
 
-test('refreshes grayline every five visible minutes and preserves selected path details', async () => {
+test('refreshes grayline every five visible minutes and preserves selected endpoint details', async () => {
   vi.useFakeTimers()
   mockVisibilityState('visible')
   vi.setSystemTime(new Date('2026-05-18T00:00:00Z'))
@@ -277,10 +533,13 @@ test('refreshes grayline every five visible minutes and preserves selected path 
   const initialGrayline = latestDeckLayer('grayline-terminator-line') as DeckLayer & {
     props: { data: Array<{ observationTime: string }> }
   }
-  const pathLayer = latestDeckLayer('wspr-deck-paths') as DeckLayer & {
-    props: { onClick: (info: { object: unknown }) => void }
+  const endpointLayer = latestDeckLayer('wspr-deck-endpoints') as DeckLayer & {
+    props: {
+      data: Array<{ pathId: string }>
+      onClick: (info: { object: { pathId: string } | null }) => void
+    }
   }
-  act(() => pathLayer.props.onClick({ object: { id: '1' } }))
+  act(() => endpointLayer.props.onClick({ object: endpointLayer.props.data[0] }))
   expect(screen.getByText(/VK2DJJ to VK3ABC/i)).toBeInTheDocument()
   mocks.setStyle.mockClear()
   mocks.fitBounds.mockClear()

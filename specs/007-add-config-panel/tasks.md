@@ -18,12 +18,12 @@
 
 **Purpose**: Create the new frontend service/component/test files required by the plan.
 
-- [ ] T001 Create user configuration service skeleton with exported types, option constants, default configuration, and TODO-free stubs in `frontend/src/services/userConfig.ts`
-- [ ] T002 [P] Create WSPR filtering service skeleton with exported filter function signatures in `frontend/src/services/wsprFilters.ts`
-- [ ] T003 [P] Create user configuration unit test scaffold covering defaults, storage, MGRS validation, and Mixed normalization in `frontend/src/services/userConfig.test.ts`
-- [ ] T004 [P] Create WSPR filtering unit test scaffold covering Mixed, single-band, multi-band, and unknown-band cases in `frontend/src/services/wsprFilters.test.ts`
-- [ ] T005 [P] Create configuration panel component skeleton with typed props for value, save, close, and first-run mode in `frontend/src/components/ConfigPanel.tsx`
-- [ ] T006 [P] Create configuration panel component test scaffold for opening, validation, selectors, and save behavior in `frontend/src/components/ConfigPanel.test.tsx`
+- [X] T001 Create user configuration service skeleton with exported types, option constants, default configuration, and TODO-free stubs in `frontend/src/services/userConfig.ts`
+- [X] T002 [P] Create WSPR filtering service skeleton with exported filter function signatures in `frontend/src/services/wsprFilters.ts`
+- [X] T003 [P] Create user configuration unit test scaffold covering defaults, storage, Maidenhead validation, and Mixed normalization in `frontend/src/services/userConfig.test.ts`
+- [X] T004 [P] Create WSPR filtering unit test scaffold covering Mixed, single-band, multi-band, and unknown-band cases in `frontend/src/services/wsprFilters.test.ts`
+- [X] T005 [P] Create configuration panel component skeleton with typed props for value, save, close, and first-run mode in `frontend/src/components/ConfigPanel.tsx`
+- [X] T006 [P] Create configuration panel component test scaffold for opening, validation, selectors, and save behavior in `frontend/src/components/ConfigPanel.test.tsx`
 
 ---
 
@@ -33,15 +33,15 @@
 
 **Critical**: No user story work should begin until this phase is complete.
 
-- [ ] T007 Implement amateur band and mode option lists, including Mixed and all required band/mode labels from FR-008 and FR-011, in `frontend/src/services/userConfig.ts`
-- [ ] T008 Implement User Configuration types, defaults, localStorage read/write, callsign persistence, and invalid stored value normalization in `frontend/src/services/userConfig.ts`
-- [ ] T009 Implement MGRS normalization and validation for empty, 4-digit precision, and 6-digit precision values in `frontend/src/services/userConfig.ts`
-- [ ] T010 Implement Mixed precedence normalization for band and mode selections in `frontend/src/services/userConfig.ts`
-- [ ] T011 Implement WSPR result band normalization and client-side band filtering rules in `frontend/src/services/wsprFilters.ts`
-- [ ] T012 [P] Add unit tests for defaults, localStorage persistence, callsign persistence, and invalid stored value normalization in `frontend/src/services/userConfig.test.ts`
-- [ ] T013 [P] Add unit tests for empty, valid 4-digit, valid 6-digit, invalid, lowercase, and whitespace MGRS values in `frontend/src/services/userConfig.test.ts`
-- [ ] T014 [P] Add unit tests for Mixed precedence in band and mode selections in `frontend/src/services/userConfig.test.ts`
-- [ ] T015 [P] Add unit tests for WSPR filtering with Mixed, one band, multiple bands, missing band, and unknown band values in `frontend/src/services/wsprFilters.test.ts`
+- [X] T007 Implement amateur band and mode option lists, including Mixed and all required band/mode labels from FR-008 and FR-011, in `frontend/src/services/userConfig.ts`
+- [X] T008 Implement User Configuration types, defaults, localStorage read/write, callsign persistence, and invalid stored value normalization in `frontend/src/services/userConfig.ts`
+- [X] T009 Implement Maidenhead normalization and validation for empty, 4-character, and 6-character values in `frontend/src/services/userConfig.ts`
+- [X] T010 Implement Mixed precedence normalization for band and mode selections in `frontend/src/services/userConfig.ts`
+- [X] T011 Implement WSPR result band normalization and client-side band filtering rules in `frontend/src/services/wsprFilters.ts`
+- [X] T012 [P] Add unit tests for defaults, localStorage persistence, callsign persistence, and invalid stored value normalization in `frontend/src/services/userConfig.test.ts`
+- [X] T013 [P] Add unit tests for empty, valid 4-character, valid 6-character, invalid, lowercase, and whitespace Maidenhead values in `frontend/src/services/userConfig.test.ts`
+- [X] T014 [P] Add unit tests for Mixed precedence in band and mode selections in `frontend/src/services/userConfig.test.ts`
+- [X] T015 [P] Add unit tests for WSPR filtering with Mixed, one band, multiple bands, missing band, and unknown band values in `frontend/src/services/wsprFilters.test.ts`
 
 **Checkpoint**: Shared services are ready and covered by deterministic unit tests.
 
@@ -55,16 +55,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add ConfigPanel tests for dialog semantics, accessible labels, close action, save action, optional callsign, and restored saved values in `frontend/src/components/ConfigPanel.test.tsx`
-- [ ] T017 [P] [US1] Add WsprMap tests for first-run panel display, cog-open behavior, no-callsign general results, and preserved map state in `frontend/src/components/WsprMap.test.tsx`
+- [X] T016 [P] [US1] Add ConfigPanel tests for dialog semantics, accessible labels, close action, save action, optional callsign, and restored saved values in `frontend/src/components/ConfigPanel.test.tsx`
+- [X] T017 [P] [US1] Add WsprMap tests for first-run panel display, cog-open behavior, no-callsign general results, and preserved map state in `frontend/src/components/WsprMap.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement ConfigPanel dialog layout, callsign field, save/close controls, and accessible labeling in `frontend/src/components/ConfigPanel.tsx`
-- [ ] T019 [US1] Wire ConfigPanel into WsprMap state so the bottom-left cog opens it and close does not discard previously saved configuration in `frontend/src/components/WsprMap.tsx`
-- [ ] T020 [US1] Replace the no-callsign callsign-only prompt with first-run ConfigPanel behavior in `frontend/src/components/WsprMap.tsx`
-- [ ] T021 [US1] Update WsprMap result loading so empty callsign fetches and displays general WSPR results instead of blocking the map in `frontend/src/components/WsprMap.tsx`
-- [ ] T022 [US1] Add cog button and base panel layout styling that keeps controls usable on desktop and mobile viewports in `frontend/src/index.css`
+- [X] T018 [US1] Implement ConfigPanel dialog layout, callsign field, save/close controls, and accessible labeling in `frontend/src/components/ConfigPanel.tsx`
+- [X] T019 [US1] Wire ConfigPanel into WsprMap state so the bottom-left cog opens it and close does not discard previously saved configuration in `frontend/src/components/WsprMap.tsx`
+- [X] T020 [US1] Replace the no-callsign callsign-only prompt with first-run ConfigPanel behavior in `frontend/src/components/WsprMap.tsx`
+- [X] T021 [US1] Update WsprMap result loading so empty callsign fetches and displays general WSPR results instead of blocking the map in `frontend/src/components/WsprMap.tsx`
+- [X] T022 [US1] Add cog button and base panel layout styling that keeps controls usable on desktop and mobile viewports in `frontend/src/App.css`
 
 **Checkpoint**: User Story 1 is independently functional and testable as the MVP.
 
@@ -72,19 +72,19 @@
 
 ## Phase 4: User Story 2 - Set Operating Location (Priority: P1)
 
-**Goal**: A user can save empty, 4-digit, or 6-digit MGRS operating location values, while invalid non-empty values are rejected with clear guidance.
+**Goal**: A user can save empty, 4-character, or 6-character Maidenhead grid locator values, while invalid non-empty values are rejected with clear guidance.
 
-**Independent Test**: Open the configuration panel, save empty location, save valid 4-digit MGRS, save valid 6-digit MGRS, and confirm invalid values show the expected-format error and are not saved.
+**Independent Test**: Open the configuration panel, save empty location, save valid 4-character Maidenhead grid, save valid 6-character Maidenhead grid, and confirm invalid values show the expected-format error and are not saved.
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Add ConfigPanel tests for empty, 4-digit, 6-digit, invalid MGRS, blocked save, and error message behavior in `frontend/src/components/ConfigPanel.test.tsx`
-- [ ] T024 [P] [US2] Add WsprMap tests proving saved MGRS values are restored through the panel without changing map position unexpectedly in `frontend/src/components/WsprMap.test.tsx`
+- [X] T023 [P] [US2] Add ConfigPanel tests for empty, 4-character, 6-character, invalid Maidenhead, blocked save, and error message behavior in `frontend/src/components/ConfigPanel.test.tsx`
+- [X] T024 [P] [US2] Add WsprMap tests proving saved Maidenhead values are restored through the panel without changing map position unexpectedly in `frontend/src/components/WsprMap.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Add MGRS input, normalized display value, validation error text, and save-blocking behavior to ConfigPanel in `frontend/src/components/ConfigPanel.tsx`
-- [ ] T026 [US2] Connect ConfigPanel MGRS save and restore behavior to userConfig service in `frontend/src/components/WsprMap.tsx`
+- [X] T025 [US2] Add Maidenhead input, normalized display value, validation error text, and save-blocking behavior to ConfigPanel in `frontend/src/components/ConfigPanel.tsx`
+- [X] T026 [US2] Connect ConfigPanel Maidenhead save and restore behavior to userConfig service in `frontend/src/components/WsprMap.tsx`
 
 **Checkpoint**: User Story 2 is independently functional and testable.
 
@@ -98,15 +98,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T027 [P] [US3] Add ConfigPanel tests for band selector options, multi-select behavior, and Mixed exclusivity in `frontend/src/components/ConfigPanel.test.tsx`
-- [ ] T028 [P] [US3] Add WsprMap tests for single-band filtering, multi-band filtering, Mixed unfiltered behavior, unknown-band exclusion, and empty-result messaging in `frontend/src/components/WsprMap.test.tsx`
+- [X] T027 [P] [US3] Add ConfigPanel tests for band selector options, multi-select behavior, and Mixed exclusivity in `frontend/src/components/ConfigPanel.test.tsx`
+- [X] T028 [P] [US3] Add WsprMap tests for single-band filtering, multi-band filtering, Mixed unfiltered behavior, unknown-band exclusion, and empty-result messaging in `frontend/src/components/WsprMap.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Add band selector UI with Mixed plus all standard amateur band options to ConfigPanel in `frontend/src/components/ConfigPanel.tsx`
-- [ ] T030 [US3] Apply wsprFilters output before WSPR path rendering and activity detail selection in `frontend/src/components/WsprMap.tsx`
-- [ ] T031 [US3] Add active band filter and no-matching-results messaging without affecting Mixed behavior in `frontend/src/components/WsprMap.tsx`
-- [ ] T032 [US3] Style band selector groups and empty-result messaging for desktop and mobile usability in `frontend/src/index.css`
+- [X] T029 [US3] Add band selector UI with Mixed plus all standard amateur band options to ConfigPanel in `frontend/src/components/ConfigPanel.tsx`
+- [X] T030 [US3] Apply wsprFilters output before WSPR path rendering and activity detail selection in `frontend/src/components/WsprMap.tsx`
+- [X] T031 [US3] Add active band filter and no-matching-results messaging without affecting Mixed behavior in `frontend/src/components/WsprMap.tsx`
+- [X] T032 [US3] Style band selector groups and empty-result messaging for desktop and mobile usability in `frontend/src/App.css`
 
 **Checkpoint**: User Story 3 is independently functional and testable.
 
@@ -120,13 +120,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T033 [P] [US4] Add ConfigPanel tests for mode selector options, multi-select behavior, Mixed exclusivity, persistence, and restored values in `frontend/src/components/ConfigPanel.test.tsx`
-- [ ] T034 [P] [US4] Add WsprMap tests proving non-WSPR mode selections do not hide current WSPR results in `frontend/src/components/WsprMap.test.tsx`
+- [X] T033 [P] [US4] Add ConfigPanel tests for mode selector options, multi-select behavior, Mixed exclusivity, persistence, and restored values in `frontend/src/components/ConfigPanel.test.tsx`
+- [X] T034 [P] [US4] Add WsprMap tests proving non-WSPR mode selections do not hide current WSPR results in `frontend/src/components/WsprMap.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] Add mode selector UI with Mixed plus all required standard mode categories to ConfigPanel in `frontend/src/components/ConfigPanel.tsx`
-- [ ] T036 [US4] Persist mode selection through userConfig without passing modes into current WSPR filtering in `frontend/src/components/WsprMap.tsx`
+- [X] T035 [US4] Add mode selector UI with Mixed plus all required standard mode categories to ConfigPanel in `frontend/src/components/ConfigPanel.tsx`
+- [X] T036 [US4] Persist mode selection through userConfig without passing modes into current WSPR filtering in `frontend/src/components/WsprMap.tsx`
 
 **Checkpoint**: User Story 4 is independently functional and testable.
 
@@ -136,14 +136,14 @@
 
 **Purpose**: Final verification and quality gates across all completed user stories.
 
-- [ ] T037 [P] Add Playwright smoke coverage for first-run panel, cog reopen, save action, band filtering, mode non-filtering, and mobile usability in `frontend/tests/ui/map-ui.spec.ts`
-- [ ] T038 [P] Review configuration UI copy, accessible names, form labels, and error text against `specs/007-add-config-panel/contracts/ui.md` in `frontend/src/components/ConfigPanel.tsx`
-- [ ] T039 Run `npm run lint` from `frontend/` and fix any issues in touched frontend files
-- [ ] T040 Run `npm run typecheck` from `frontend/` and fix any issues in touched frontend files
-- [ ] T041 Run `npm run test:coverage` from `frontend/` and fix any coverage or test failures in touched frontend files
-- [ ] T042 Run `npm run test:e2e` from `frontend/` and fix any UI regression failures in touched frontend files
-- [ ] T043 Run `npm run build` from `frontend/` and fix any build failures in touched frontend files
-- [ ] T044 Verify the manual quickstart scenarios in `specs/007-add-config-panel/quickstart.md` and update implementation if any scenario fails
+- [X] T037 [P] Add Playwright smoke coverage for first-run panel, cog reopen, save action, band filtering, mode non-filtering, and mobile usability in `frontend/tests/ui/map-ui.spec.ts`
+- [X] T038 [P] Review configuration UI copy, accessible names, form labels, and error text against `specs/007-add-config-panel/contracts/ui.md` in `frontend/src/components/ConfigPanel.tsx`
+- [X] T039 Run `npm run lint` from `frontend/` and fix any issues in touched frontend files
+- [X] T040 Run `npm run typecheck` from `frontend/` and fix any issues in touched frontend files
+- [X] T041 Run `npm run test:coverage` from `frontend/` and fix any coverage or test failures in touched frontend files
+- [X] T042 Run `npm run test:e2e` from `frontend/` and fix any UI regression failures in touched frontend files
+- [X] T043 Run `npm run build` from `frontend/` and fix any build failures in touched frontend files
+- [X] T044 Verify the manual quickstart scenarios in `specs/007-add-config-panel/quickstart.md` and update implementation if any scenario fails
 
 ---
 
@@ -187,8 +187,8 @@ Task: "T017 Add WsprMap tests for first-run panel display, cog-open behavior, no
 ### User Story 2
 
 ```text
-Task: "T023 Add ConfigPanel tests for empty, 4-digit, 6-digit, invalid MGRS, blocked save, and error message behavior in frontend/src/components/ConfigPanel.test.tsx"
-Task: "T024 Add WsprMap tests proving saved MGRS values are restored through the panel without changing map position unexpectedly in frontend/src/components/WsprMap.test.tsx"
+Task: "T023 Add ConfigPanel tests for empty, 4-character, 6-character, invalid Maidenhead, blocked save, and error message behavior in frontend/src/components/ConfigPanel.test.tsx"
+Task: "T024 Add WsprMap tests proving saved Maidenhead values are restored through the panel without changing map position unexpectedly in frontend/src/components/WsprMap.test.tsx"
 ```
 
 ### User Story 3

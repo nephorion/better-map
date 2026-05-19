@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { API_BASE_URL } from './config'
 import { ApiClientError, type ApiErrorCode } from './apiClient'
+import { requestWindowToHours, type RequestWindow } from './userConfig'
 
 export type ActivityFeature = {
   id: string
@@ -25,6 +26,7 @@ export type ActivityFeature = {
 export type ActivityLookupResult = {
   callsign: string
   window_days: number
+  window_hours: number
   source: string
   count: number
   truncated: boolean
@@ -38,10 +40,13 @@ type ErrorPayload = {
   }
 }
 
-export async function fetchWsprActivity(callsign: string): Promise<ActivityLookupResult> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/wspr/activity?callsign=${encodeURIComponent(callsign)}`,
-  )
+export async function fetchWsprActivity(callsign?: string | null, requestWindow?: RequestWindow): Promise<ActivityLookupResult> {
+  const normalized = callsign?.trim() ?? ''
+  const params = new URLSearchParams()
+  if (normalized) params.set('callsign', normalized)
+  if (requestWindow) params.set('window_hours', String(requestWindowToHours(requestWindow)))
+  const query = params.toString() ? `?${params}` : ''
+  const response = await fetch(`${API_BASE_URL}/api/wspr/activity${query}`)
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as ErrorPayload

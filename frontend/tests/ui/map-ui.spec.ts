@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const activityPayload = {
   callsign: 'VK2DJJ',
@@ -38,15 +38,19 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/version', async (route) => {
     await route.fulfill({ json: { short_hash: 'e2etest' } })
   })
-  await page.route('**/api/wspr/activity?**', async (route) => {
+  await page.route('**/api/wspr/activity**', async (route) => {
     await route.fulfill({ json: activityPayload })
   })
 })
 
+async function saveCallsignConfiguration(page: Page, callsign = 'VK2DJJ') {
+  await page.getByRole('textbox', { name: /callsign/i }).fill(callsign)
+  await page.getByRole('button', { name: /save configuration/i }).click()
+}
+
 test('renders the full-window map without a bottom-left path list', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
-  await page.getByRole('button', { name: 'Set Callsign', exact: true }).click()
+  await saveCallsignConfiguration(page)
 
   await expect(page.getByLabel('World map')).toBeVisible()
   await expect(page.locator('.maplibregl-canvas')).toBeVisible()
@@ -58,14 +62,14 @@ test('renders the full-window map without a bottom-left path list', async ({ pag
 test('keeps map and controls usable on mobile-sized viewports', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
-  await page.getByRole('button', { name: 'Set Callsign', exact: true }).click()
+  await saveCallsignConfiguration(page)
 
   await expect(page.getByLabel('World map')).toBeVisible()
   await expect(page.locator('.maplibregl-canvas')).toBeVisible()
   await expect(page.getByRole('button', { name: /active callsign/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /choose base map/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /open map configuration/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
   await expect(page.getByLabel('Frontend version hash')).not.toBeEmpty()
@@ -73,8 +77,7 @@ test('keeps map and controls usable on mobile-sized viewports', async ({ page })
 
 test('keeps overlay controls usable over the browser-rendered map', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
-  await page.getByRole('button', { name: 'Set Callsign', exact: true }).click()
+  await saveCallsignConfiguration(page)
 
   await expect(page.getByRole('button', { name: /active callsign/i })).toBeVisible()
   await page.getByRole('button', { name: /choose base map/i }).click()
@@ -88,8 +91,7 @@ test('keeps overlay controls usable over the browser-rendered map', async ({ pag
 
 test('keeps controls usable after simulated visibility return', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('textbox', { name: 'Callsign' }).fill('VK2DJJ')
-  await page.getByRole('button', { name: 'Set Callsign', exact: true }).click()
+  await saveCallsignConfiguration(page)
   await expect(page.getByRole('button', { name: /refresh wspr activity/i })).toBeVisible()
 
   await page.evaluate(() => {
@@ -103,4 +105,29 @@ test('keeps controls usable after simulated visibility return', async ({ page })
   await expect(page.getByRole('link', { name: /visit nephorion main site/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /source code/i })).toBeVisible()
   await expect(page.getByLabel('Frontend version hash')).not.toBeEmpty()
+})
+
+test('uses configuration panel for first-run setup and reopen', async ({ page }) => {
+  await page.goto('/')
+
+  await expect(page.getByRole('dialog', { name: /map configuration/i })).toBeVisible()
+  await page.getByRole('textbox', { name: /maidenhead grid/i }).fill('qf56od')
+  await page.getByRole('checkbox', { name: '20 m' }).check()
+  await page.getByRole('checkbox', { name: 'FT8' }).check()
+  await page.getByRole('button', { name: /save configuration/i }).click()
+  await expect(page.getByRole('dialog', { name: /map configuration/i })).toHaveCount(0)
+
+  await page.getByRole('button', { name: /open map configuration/i }).click()
+  await expect(page.getByRole('textbox', { name: /maidenhead grid/i })).toHaveValue('QF56OD')
+  await expect(page.getByRole('checkbox', { name: '20 m' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'FT8' })).toBeChecked()
+})
+
+test('keeps WSPR results visible when only mode preferences change', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('checkbox', { name: 'FT8' }).check()
+  await page.getByRole('button', { name: /save configuration/i }).click()
+
+  await expect(page.getByLabel('World map')).toBeVisible()
+  await expect(page.getByText(/no wspr paths match the active band filter/i)).toHaveCount(0)
 })

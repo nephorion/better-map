@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import { PathLayer, PolygonLayer } from '@deck.gl/layers'
+import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import maplibregl, {
   type Map as MapLibreMap,
   type StyleSpecification,
@@ -9,17 +9,54 @@ import maplibregl, {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ActivityFeature } from '../services/wsprActivity'
 import { toMapPaths } from '../services/mapFeatures'
+import { defaultUserConfig, requestWindowToHours, type RequestWindow, type UserConfig } from '../services/userConfig'
+import { filterWsprFeaturesByBand } from '../services/wsprFilters'
 import { ActivityDetails } from './ActivityDetails'
+import { ConfigPanel } from './ConfigPanel'
 import { defaultBaseMapLayer, findBaseMapLayer, type BaseMapLayer } from '../services/baseMapLayers'
 import { readStoredMapView, saveMapView } from '../services/mapView'
 import * as terminatorService from '../services/terminator'
+
+type ActivityRole = ActivityFeature['properties']['role']
+
+type PathEndpoint = {
+  id: string
+  pathId: string
+  coordinates: [number, number]
+  endpoint: 'start' | 'end'
+  station: string
+  stationRole: 'tx' | 'rx'
+  activityRole: ActivityRole
+  opacity: number
+}
+
+type PathSegment = {
+  id: string
+  pathId: string
+  coordinates: [[number, number], [number, number]]
+  activityRole: ActivityRole
+  opacity: number
+}
+
+type RgbaColor = [number, number, number, number]
 
 type WsprMapProps = {
   features: ActivityFeature[]
   truncated?: boolean
   baseLayerId?: BaseMapLayer['id']
   activeCallsign?: string | null
+  userConfig?: UserConfig
+  configOpen?: boolean
+  firstRunConfig?: boolean
+  onOpenConfig?: () => void
+  onCloseConfig?: () => void
+  onSaveConfig?: (config: UserConfig) => void
 }
+
+const TX_COLOR: RgbaColor = [255, 154, 162, 230]
+const RX_COLOR: RgbaColor = [170, 225, 170, 230]
+const BOTH_COLOR: RgbaColor = [255, 222, 122, 230]
+const MIN_AGE_OPACITY = 0.08
 
 function worldStyle(layer: BaseMapLayer): StyleSpecification {
   return {
@@ -42,12 +79,82 @@ function collapseAttribution(map: MapLibreMap) {
   attribution?.classList.remove('maplibregl-compact-show')
 }
 
-export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign = null }: WsprMapProps) {
+function startsAtReceiver(path: ReturnType<typeof toMapPaths>[number], activeCallsign?: string | null) {
+  const active = activeCallsign?.trim().toUpperCase()
+  const tx = path.properties.tx_sign?.trim().toUpperCase()
+  const rx = path.properties.rx_sign?.trim().toUpperCase()
+  return active === rx && active !== tx
+}
+
+function parseWsprUtcTime(time: string) {
+  const normalized = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(time) ? time : `${time}Z`
+  return Date.parse(normalized)
+}
+
+function opacityForAge(time: string, requestWindow: RequestWindow) {
+  const observedAt = parseWsprUtcTime(time)
+  if (!Number.isFinite(observedAt)) return 1
+  const windowMs = requestWindowToHours(requestWindow) * 60 * 60 * 1000
+  const ageRatio = Math.max(0, Date.now() - observedAt) / windowMs
+  return Math.max(MIN_AGE_OPACITY, Math.min(1, 1 - ageRatio))
+}
+
+function pathSegments(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow): PathSegment[] {
+  return paths.map((path) => {
+    const opacity = opacityForAge(path.properties.time, requestWindow)
+    return { id: path.id, pathId: path.id, coordinates: path.coordinates, activityRole: path.properties.role, opacity }
+  })
+}
+
+function pathEndpoints(paths: ReturnType<typeof toMapPaths>, requestWindow: RequestWindow, activeCallsign?: string | null): PathEndpoint[] {
+  return paths.flatMap((path) => {
+    const tx = path.properties.tx_sign
+    const rx = path.properties.rx_sign
+    const receiverFirst = startsAtReceiver(path, activeCallsign)
+    const startStation = receiverFirst ? rx : tx
+    const endStation = receiverFirst ? tx : rx
+    const startRole = receiverFirst ? 'rx' : 'tx'
+    const endRole = receiverFirst ? 'tx' : 'rx'
+    const opacity = opacityForAge(path.properties.time, requestWindow)
+
+    return [
+      { id: `${path.id}-start`, pathId: path.id, coordinates: path.coordinates[0], endpoint: 'start' as const, station: startStation, stationRole: startRole, activityRole: path.properties.role, opacity },
+      { id: `${path.id}-end`, pathId: path.id, coordinates: path.coordinates[1], endpoint: 'end' as const, station: endStation, stationRole: endRole, activityRole: path.properties.role, opacity },
+    ]
+  })
+}
+
+function colorForActivityRole(activityRole: ActivityRole, opacity = 1): RgbaColor {
+  const [r, g, b, alpha] = activityRole === 'transmitter' ? TX_COLOR : activityRole === 'receiver' ? RX_COLOR : BOTH_COLOR
+  return [r, g, b, Math.round(alpha * opacity)]
+}
+
+function filterFeaturesByActivityVisibility(features: ActivityFeature[], visibility: UserConfig['activityVisibility']) {
+  return features.filter((feature) => {
+    if (feature.properties.role === 'transmitter') return visibility.showSpots
+    if (feature.properties.role === 'receiver') return visibility.showHeard
+    return visibility.showSpots || visibility.showHeard
+  })
+}
+
+export function WsprMap({
+  features,
+  baseLayerId = 'osm-standard',
+  activeCallsign = null,
+  userConfig,
+  configOpen,
+  firstRunConfig = false,
+  onOpenConfig,
+  onCloseConfig,
+  onSaveConfig,
+}: WsprMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const deckOverlayRef = useRef<MapboxOverlay | null>(null)
+  const [localConfig, setLocalConfig] = useState(() => defaultUserConfig(activeCallsign ?? ''))
+  const [localConfigOpen, setLocalConfigOpen] = useState(false)
   const [mapReady, setMapReady] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
   const [grayline, setGrayline] = useState(() => {
     try {
       return terminatorService.createGraylineTerminator(new Date())
@@ -56,10 +163,39 @@ export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign
     }
   })
   const lastGraylineRefreshRef = useRef(grayline ? Date.parse(grayline.lastUpdatedAt) : 0)
-  const paths = useMemo(() => toMapPaths(features, activeCallsign), [activeCallsign, features])
-  const activeSelectedId = features.some((feature) => feature.id === selectedId) ? selectedId : null
-  const selected = features.find((feature) => feature.id === activeSelectedId) ?? null
+  const effectiveConfig = userConfig ?? localConfig
+  const effectiveConfigOpen = configOpen ?? localConfigOpen
+  const bandFilteredFeatures = useMemo(
+    () => filterWsprFeaturesByBand(features, effectiveConfig.bandSelection),
+    [effectiveConfig.bandSelection, features],
+  )
+  const filteredFeatures = useMemo(
+    () => filterFeaturesByActivityVisibility(bandFilteredFeatures, effectiveConfig.activityVisibility),
+    [bandFilteredFeatures, effectiveConfig.activityVisibility],
+  )
+  const paths = useMemo(() => toMapPaths(filteredFeatures, activeCallsign), [activeCallsign, filteredFeatures])
+  const segments = useMemo(() => pathSegments(paths, effectiveConfig.requestWindow), [effectiveConfig.requestWindow, paths])
+  const endpoints = useMemo(() => pathEndpoints(paths, effectiveConfig.requestWindow, activeCallsign), [activeCallsign, effectiveConfig.requestWindow, paths])
+  const selectedFeature = filteredFeatures.find((feature) => feature.id === selectedPathId) ?? null
   const baseLayer = findBaseMapLayer(baseLayerId)
+  const bandFilterActive = effectiveConfig.bandSelection.kind === 'specific'
+  const activityFilterActive = !effectiveConfig.activityVisibility.showSpots || !effectiveConfig.activityVisibility.showHeard
+
+  function openConfig() {
+    if (onOpenConfig) onOpenConfig()
+    else setLocalConfigOpen(true)
+  }
+
+  function closeConfig() {
+    if (onCloseConfig) onCloseConfig()
+    else setLocalConfigOpen(false)
+  }
+
+  function saveConfig(config: UserConfig) {
+    setLocalConfig(config)
+    if (onSaveConfig) onSaveConfig(config)
+    else setLocalConfigOpen(false)
+  }
 
   useEffect(() => {
     const storedView = readStoredMapView()
@@ -129,22 +265,34 @@ export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign
     deckOverlay.setProps({
       layers: [
         ...graylineLayers,
-        new PathLayer({
+        new PathLayer<PathSegment>({
           id: 'wspr-deck-paths',
-          data: paths,
-          getPath: (path) => path.coordinates,
-          getColor: (path) => (path.id === activeSelectedId ? [255, 222, 122, 245] : [104, 211, 255, 220]),
-          getWidth: (path) => (path.id === activeSelectedId ? 5 : 3),
-          widthMinPixels: 2,
+          data: segments,
+          getPath: (segment) => segment.coordinates,
+          getColor: (segment) => colorForActivityRole(segment.activityRole, segment.opacity),
+          getWidth: 1.5,
+          widthMinPixels: 1,
+          pickable: false,
+        }),
+        new ScatterplotLayer<PathEndpoint>({
+          id: 'wspr-deck-endpoints',
+          data: endpoints,
+          getPosition: (endpoint) => endpoint.coordinates,
+          getFillColor: [255, 255, 255, 0],
+          getLineColor: (endpoint) => colorForActivityRole(endpoint.activityRole, endpoint.opacity),
+          getRadius: 4,
+          radiusUnits: 'pixels',
+          stroked: true,
+          filled: false,
+          lineWidthMinPixels: 1,
           pickable: true,
-          autoHighlight: true,
           onClick: (info) => {
-            if (info.object) setSelectedId(info.object.id)
+            if (info.object) setSelectedPathId(info.object.pathId)
           },
         }),
       ],
     })
-  }, [activeSelectedId, grayline, mapReady, paths])
+  }, [endpoints, grayline, mapReady, segments])
 
   useEffect(() => {
     function refreshGrayline() {
@@ -175,9 +323,18 @@ export function WsprMap({ features, baseLayerId = 'osm-standard', activeCallsign
 
   return (
     <div className="wspr-map" aria-label="WSPR path map">
-      {paths.length === 0 ? <p>No map paths to display.</p> : null}
+      {paths.length === 0 ? (
+        <p>{features.length > 0 && (bandFilterActive || activityFilterActive) ? 'No WSPR paths match the active filters.' : 'No map paths to display.'}</p>
+      ) : null}
       <div ref={containerRef} className="map-canvas" role="application" aria-label="World map" />
-      <ActivityDetails feature={selected} onClose={() => setSelectedId(null)} />
+      <button type="button" className="config-toggle" aria-label="Open map configuration" onClick={openConfig}>
+        ⚙
+        <span className="control-tooltip">Configuration</span>
+      </button>
+      {effectiveConfigOpen ? (
+        <ConfigPanel value={effectiveConfig} firstRun={firstRunConfig} onSave={saveConfig} onClose={closeConfig} />
+      ) : null}
+      <ActivityDetails feature={selectedFeature} timeZone={effectiveConfig.timeZone} onClose={() => setSelectedPathId(null)} />
     </div>
   )
 }

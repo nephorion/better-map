@@ -27,10 +27,14 @@ test('does not render a panel when no activity is selected', () => {
 })
 
 test('shows selected activity details in a keyboard reachable region', () => {
-  render(<ActivityDetails feature={feature} />)
+  render(<ActivityDetails feature={feature} timeZone="Australia/Sydney" />)
 
   expect(screen.getByLabelText(/selected wspr activity details/i)).toHaveAttribute('tabIndex', '0')
   expect(screen.getByText(/VK2DJJ to VK3ABC/i)).toBeInTheDocument()
+  expect(screen.getByText(/UTC time/i)).toBeInTheDocument()
+  expect(screen.getByText(/16 May 2026, 10:30:00 am UTC/i)).toBeInTheDocument()
+  expect(screen.getByText(/Local time/i)).toBeInTheDocument()
+  expect(screen.getByText(/16 May 2026, 8:30:00 pm AEST/i)).toBeInTheDocument()
   expect(screen.getByText(/713/)).toBeInTheDocument()
 })
 
@@ -52,4 +56,10 @@ test('shows unknown fallbacks for missing optional details', () => {
   expect(screen.getByText(/unknown km/i)).toBeInTheDocument()
   expect(screen.getByText(/unknown db/i)).toBeInTheDocument()
   expect(screen.getByText(/^unknown$/i)).toBeInTheDocument()
+})
+
+test('shows unknown time fallback for invalid activity timestamps', () => {
+  render(<ActivityDetails feature={{ ...feature, properties: { ...feature.properties, time: 'bad' } }} timeZone="UTC" />)
+
+  expect(screen.getAllByText(/unknown/i).length).toBeGreaterThanOrEqual(2)
 })

@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
 from better_map.api.app import app
+from better_map.models.callsign import CallsignQuery
 from better_map.models.wspr import ActivityLookupResult
 from better_map.services.wspr_live import (
     WsprProviderError,
@@ -15,7 +16,14 @@ from better_map.services.wspr_live import (
 
 class FakeProvider:
     async def fetch_activity(self, query: object) -> ActivityLookupResult:
-        return ActivityLookupResult(callsign="VK2DJJ", count=0, truncated=False)
+        callsign = query.callsign if isinstance(query, CallsignQuery) else ""
+        window_hours = query.window_hours if isinstance(query, CallsignQuery) else 240
+        return ActivityLookupResult(
+            callsign=callsign or "",
+            window_hours=window_hours,
+            count=0,
+            truncated=False,
+        )
 
 
 class TimeoutProvider:
@@ -47,8 +55,35 @@ def test_activity_endpoint_returns_lookup(monkeypatch: MonkeyPatch) -> None:
     assert response.json()["callsign"] == "VK2DJJ"
 
 
+def test_activity_endpoint_accepts_custom_window_hours(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("better_map.api.wspr.WsprLiveProvider", lambda: FakeProvider())
+
+    response = TestClient(app).get("/api/wspr/activity?callsign=vk2djj&window_hours=6")
+
+    assert response.status_code == 200
+    assert response.json()["window_hours"] == 6
+
+
+def test_activity_endpoint_returns_general_lookup_without_callsign(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("better_map.api.wspr.WsprLiveProvider", lambda: FakeProvider())
+
+    response = TestClient(app).get("/api/wspr/activity")
+
+    assert response.status_code == 200
+    assert response.json()["callsign"] == ""
+
+
 def test_activity_endpoint_rejects_invalid_callsign() -> None:
     response = TestClient(app).get("/api/wspr/activity?callsign=bad callsign")
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "invalid_request"
+
+
+def test_activity_endpoint_rejects_invalid_window_hours() -> None:
+    response = TestClient(app).get("/api/wspr/activity?window_hours=0")
 
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "invalid_request"

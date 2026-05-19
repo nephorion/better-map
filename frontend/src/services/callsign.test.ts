@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { callsignStorageKey, readStoredCallsign, saveCallsign } from './callsign'
+import { callsignStorageKey, clearCallsign, readStoredCallsign, saveCallsign } from './callsign'
 
 function throwingStorage(): Storage {
   return {
@@ -34,4 +34,11 @@ test('saves normalized callsigns and reports session-only failures', () => {
   expect(window.localStorage.getItem(callsignStorageKey())).toBe('VK2DJJ')
   expect(saveCallsign('?')).toEqual({ callsign: null, warning: 'Enter a valid callsign.' })
   expect(saveCallsign('VK2DJJ', throwingStorage()).warning).toMatch(/session only/i)
+})
+
+test('clears stored callsigns and reports unavailable storage', () => {
+  window.localStorage.setItem(callsignStorageKey(), 'VK2DJJ')
+  expect(clearCallsign()).toBeNull()
+  expect(window.localStorage.getItem(callsignStorageKey())).toBeNull()
+  expect(clearCallsign({ ...throwingStorage(), removeItem: vi.fn(() => { throw new Error('blocked') }) })).toMatch(/storage is unavailable/i)
 })

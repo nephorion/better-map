@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add a bottom-left cog control that opens a configuration panel, use that panel as the first-run prompt when no callsign is selected, persist user map preferences locally, validate 4-digit and 6-digit MGRS location entries, support multi-select amateur band and mode preferences with Mixed as an unfiltered state, and filter current WSPRnet map results by selected bands only. Mode preferences are saved for future logbook result filtering but do not filter current WSPRnet results.
+Add a bottom-left cog control that opens a configuration panel, use that panel as the first-run prompt when no callsign is selected, persist user map preferences locally, validate 4-character and 6-character Maidenhead grid locator entries, support multi-select amateur band and mode preferences with Mixed as an unfiltered state, and filter current WSPRnet map results by selected bands only. Mode preferences are saved for future logbook result filtering but do not filter current WSPRnet results.
 
 ## Technical Context
 
@@ -33,7 +33,7 @@ Add a bottom-left cog control that opens a configuration panel, use that panel a
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 - **User-Centric UX**: PASS. The cog control gives users a persistent, discoverable entry point and the first-run panel removes the older callsign-only blocking prompt when no callsign is selected.
-- **Community-Driven Extensibility**: PASS. Band, mode, MGRS validation, and WSPR filtering are planned as small frontend service boundaries so future logbook filtering can reuse the saved mode preferences.
+- **Community-Driven Extensibility**: PASS. Band, mode, Maidenhead validation, and WSPR filtering are planned as small frontend service boundaries so future logbook filtering can reuse the saved mode preferences.
 - **Automated Quality Assurance**: PASS. Plan requires unit tests for validation/filtering/storage, component tests for the configuration panel and first-run behavior, and Playwright smoke tests for desktop/mobile usability while maintaining 100% coverage.
 
 ## Project Structure
@@ -65,7 +65,7 @@ frontend/
 │   │   └── ConfigPanel.test.tsx         # NEW — panel validation and selection tests
 │   ├── services/
 │   │   ├── userConfig.ts                # NEW — preference defaults, storage, validation helpers
-│   │   ├── userConfig.test.ts           # NEW — storage and MGRS validation coverage
+│   │   ├── userConfig.test.ts           # NEW — storage and Maidenhead validation coverage
 │   │   ├── wsprFilters.ts               # NEW — band filter helpers for WSPR features
 │   │   └── wsprFilters.test.ts          # NEW — Mixed, single-band, multi-band, unknown-band coverage
 │   └── index.css                        # MODIFIED — cog button and panel layout styles

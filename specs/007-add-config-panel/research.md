@@ -10,13 +10,13 @@
 
 **Alternatives Considered**: Backend persistence was rejected because there is no account model and the feature does not need cross-device sync. Session-only state was rejected because the spec requires settings to be reusable after the configuration window closes.
 
-### Validate MGRS Without Coordinate Conversion
+### Validate Maidenhead Without Coordinate Conversion
 
-**Decision**: Validate and store the user's MGRS value as a normalized string with 4-digit or 6-digit precision; do not add coordinate conversion in this feature.
+**Decision**: Validate and store the user's Maidenhead grid locator as a normalized string with 4-character or 6-character precision; do not add coordinate conversion in this feature.
 
-**Rationale**: The specification requires accepting a user location in MGRS format and rejecting invalid values, but does not require centering the map or deriving coordinates immediately. A focused validator satisfies the current user need without introducing a geospatial dependency.
+**Rationale**: The specification requires accepting a user location in Maidenhead format and rejecting invalid values, but does not require centering the map or deriving coordinates immediately. A focused validator satisfies the current user need without introducing a geospatial dependency.
 
-**Alternatives Considered**: Adding an MGRS conversion dependency was rejected because no current acceptance scenario requires lat/lon output. Free-form location text was rejected because it would not satisfy the MGRS validation requirements.
+**Alternatives Considered**: Adding a Maidenhead conversion dependency was rejected because no current acceptance scenario requires lat/lon output. Free-form location text was rejected because it would not satisfy the Maidenhead validation requirements.
 
 ### Use Enumerated Band And Mode Options
 

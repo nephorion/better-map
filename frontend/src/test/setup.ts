@@ -97,4 +97,10 @@ vi.mock('@deck.gl/layers', () => ({
       this.props = props
     }
   },
+  ScatterplotLayer: class ScatterplotLayerMock {
+    props: unknown
+    constructor(props: unknown) {
+      this.props = props
+    }
+  },
 }))

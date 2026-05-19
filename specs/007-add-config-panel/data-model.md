@@ -6,13 +6,13 @@ Represents the user's map configuration preferences stored in the browser.
 
 **Fields**:
 
-- `locationMgrs`: normalized MGRS location string, or empty when not provided.
+- `locationGrid`: normalized Maidenhead grid locator string, or empty when not provided.
 - `bandSelection`: either Mixed or a non-empty set of selected band identifiers.
 - `modeSelection`: either Mixed or a non-empty set of selected mode identifiers.
 
 **Validation Rules**:
 
-- `locationMgrs` is valid when empty or when it matches MGRS grid zone, 100 km square, and either 4 or 6 numeric precision digits.
+- `locationGrid` is valid when empty or when it matches a 4-character or 6-character Maidenhead grid locator.
 - Mixed band selection means no band filter and must not be stored together with specific band identifiers.
 - Mixed mode selection means no mode filter and must not be stored together with specific mode identifiers.
 - Unknown stored band or mode identifiers are ignored during read and normalized back to Mixed if no valid specific selections remain.

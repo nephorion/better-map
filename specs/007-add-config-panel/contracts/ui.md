@@ -9,9 +9,9 @@
 
 ## Configuration Panel Fields
 
-### MGRS Location
+### Maidenhead Grid Location
 
-- Accepts empty, 4-digit MGRS, or 6-digit MGRS values.
+- Accepts empty, 4-character Maidenhead, or 6-character Maidenhead values.
 - Normalizes lowercase letters to uppercase and trims whitespace.
 - Shows a clear validation error when the value is malformed or uses unsupported precision.
 - Prevents saving while invalid.

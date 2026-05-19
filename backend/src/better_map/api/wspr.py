@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from better_map.models.callsign import CallsignQuery
 from better_map.services.wspr_live import (
@@ -14,9 +14,12 @@ router = APIRouter(prefix="/api/wspr", tags=["wspr"])
 
 
 @router.get("/activity")
-async def get_activity(callsign: str) -> dict[str, object]:
+async def get_activity(
+    callsign: str | None = Query(default=None),
+    window_hours: int | None = Query(default=None),
+) -> dict[str, object]:
     try:
-        query = CallsignQuery.parse(callsign)
+        query = CallsignQuery.parse(callsign, window_hours)
         result = await WsprLiveProvider().fetch_activity(query)
     except ValueError as exc:
         raise HTTPException(

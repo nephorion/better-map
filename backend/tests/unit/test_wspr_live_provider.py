@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -27,6 +27,8 @@ class FakeResponse:
 
 
 class FakeClient:
+    last_url = ""
+
     def __init__(self, response: FakeResponse | Exception, timeout: float) -> None:
         self.response = response
         self.timeout = timeout
@@ -37,13 +39,15 @@ class FakeClient:
     async def __aexit__(self, *_args: object) -> None:
         return None
 
-    async def get(self, _url: str) -> FakeResponse:
+    async def get(self, url: str) -> FakeResponse:
+        FakeClient.last_url = url
         if isinstance(self.response, Exception):
             raise self.response
         return self.response
 
 
 def patch_client(monkeypatch: MonkeyPatch, response: FakeResponse | Exception) -> None:
+    FakeClient.last_url = ""
     monkeypatch.setattr(
         httpx,
         "AsyncClient",
@@ -77,7 +81,18 @@ async def test_fetch_activity_maps_success(monkeypatch: MonkeyPatch) -> None:
     result = await WsprLiveProvider().fetch_activity(CallsignQuery.parse("VK2DJJ"))
 
     assert result.count == 1
+    assert result.window_hours == 240
     assert result.features[0].geometry.coordinates == [[151.2, -33.8], [144.9, -37.8]]
+
+
+@pytest.mark.asyncio
+async def test_fetch_activity_uses_custom_window_hours(monkeypatch: MonkeyPatch) -> None:
+    patch_client(monkeypatch, FakeResponse(200, {"data": [row("1")]}))
+
+    result = await WsprLiveProvider().fetch_activity(CallsignQuery.parse("VK2DJJ", 6))
+
+    assert result.window_hours == 6
+    assert "now%28%27UTC%27%29+-+INTERVAL+6+HOUR" in FakeClient.last_url
 
 
 @pytest.mark.asyncio
@@ -87,6 +102,19 @@ async def test_fetch_activity_handles_receiver_role(monkeypatch: MonkeyPatch) ->
     result = await WsprLiveProvider().fetch_activity(CallsignQuery.parse("VK2DJJ"))
 
     assert result.features[0].properties["role"] == "receiver"
+
+
+@pytest.mark.asyncio
+async def test_fetch_activity_supports_general_lookup_without_callsign(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    patch_client(monkeypatch, FakeResponse(200, {"data": [row("1")]}))
+
+    result = await WsprLiveProvider().fetch_activity(CallsignQuery.parse(None))
+
+    assert result.callsign == ""
+    assert result.features[0].properties["role"] == "both"
+    assert "upper(tx_sign)" not in FakeClient.last_url
 
 
 @pytest.mark.asyncio
@@ -209,8 +237,12 @@ async def test_fetch_activity_maps_invalid_json(monkeypatch: MonkeyPatch) -> Non
         await WsprLiveProvider().fetch_activity(CallsignQuery.parse("VK2DJJ"))
 
 
-def test_parse_time_accepts_datetime() -> None:
+def test_parse_time_normalizes_values_to_utc() -> None:
     provider = WsprLiveProvider()
-    value = datetime.fromisoformat("2026-05-16T10:30:00+00:00")
+    value = datetime.fromisoformat("2026-05-16T10:30:00+10:00")
 
-    assert provider._parse_time(value) is value
+    assert provider._parse_time(value) == datetime(2026, 5, 16, 0, 30, tzinfo=UTC)
+    assert provider._parse_time("2026-05-16T10:30:00") == datetime(2026, 5, 16, 10, 30, tzinfo=UTC)
+    assert provider._parse_time(datetime(2026, 5, 16, 10, 30)) == datetime(
+        2026, 5, 16, 10, 30, tzinfo=UTC
+    )
