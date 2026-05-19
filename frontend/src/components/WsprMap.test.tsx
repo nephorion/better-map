@@ -11,8 +11,10 @@ type MapLibreMocks = {
   addLayer: ReturnType<typeof vi.fn>
   addControl: ReturnType<typeof vi.fn>
   addSource: ReturnType<typeof vi.fn>
+  canvas: HTMLCanvasElement
   extend: ReturnType<typeof vi.fn>
   fitBounds: ReturnType<typeof vi.fn>
+  getCanvas: ReturnType<typeof vi.fn>
   getCenter: ReturnType<typeof vi.fn>
   getContainer: ReturnType<typeof vi.fn>
   getSource: ReturnType<typeof vi.fn>
@@ -78,6 +80,7 @@ beforeEach(() => {
   mocks.moveEndHandler = undefined
   mocks.sourceDataHandler = undefined
   mocks.styleDataHandler = undefined
+  mocks.canvas.style.cursor = ''
   mocks.getContainer.mockReturnValue(document.createElement('div'))
   window.localStorage.clear()
 })
@@ -328,7 +331,7 @@ test('renders animated pulse dots along WSPR paths', async () => {
   expect(pulseLayer.props.pickable).toBe(false)
 })
 
-test('shows pulsing hover highlight and pointer cursor on endpoint hover', async () => {
+test('shows pulsing hover highlight and arrow cursor on endpoint hover', async () => {
   render(<WsprMap features={[feature]} />)
   act(() => mocks.loadHandler?.())
   await waitFor(() => expect(deckMocks.setProps).toHaveBeenCalled())
@@ -342,6 +345,7 @@ test('shows pulsing hover highlight and pointer cursor on endpoint hover', async
 
   // Hover over an endpoint.
   act(() => hitLayer.props.onHover({ object: hitLayer.props.data[0] }))
+  expect(mocks.canvas.style.cursor).toBe('default')
 
   // Wait for the next animation frame to pick up the hover.
   await waitFor(() => {
@@ -368,6 +372,7 @@ test('shows pulsing hover highlight and pointer cursor on endpoint hover', async
 
   // Hover off.
   act(() => hitLayer.props.onHover({ object: null }))
+  expect(mocks.canvas.style.cursor).toBe('')
   await waitFor(() => {
     expect(latestDeckLayers().find((l) => l.props.id === 'wspr-deck-endpoint-hover')).toBeUndefined()
   })
